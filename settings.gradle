@@ -1,0 +1,4 @@
+include ':nibssclient'
+include ':netpossdk-release'
+include ':app'
+rootProject.name = "NibssApiTest"
