@@ -3,6 +3,7 @@ package com.netpluspay.nibssclient.models
 import android.os.Parcelable
 import androidx.room.Entity
 import androidx.room.Ignore
+import androidx.room.Index
 import androidx.room.PrimaryKey
 import java.util.ArrayList
 import com.netpluspay.nibssclient.util.Constants
@@ -10,7 +11,7 @@ import com.netpluspay.nibssclient.util.tlv.TLVList
 import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
 
-@Entity
+@Entity(indices = [Index(value = ["RRN"], unique = true)])
 @Parcelize
 data class TransactionResponse(
     var transactionType: TransactionType,
