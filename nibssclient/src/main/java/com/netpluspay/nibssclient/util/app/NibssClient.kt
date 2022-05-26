@@ -19,6 +19,15 @@ object NibssClient {
     }
 
     @JvmStatic
+    fun init2(
+        terminalId: String,
+        terminalSerial: String
+    ) {
+        TerminalParams.TERMINAL_ID = terminalId
+        TerminalParams.TERMINAL_SERIAL = terminalSerial
+    }
+
+    @JvmStatic
     @JvmOverloads
     fun init(
         clientCertAssetFile: String,

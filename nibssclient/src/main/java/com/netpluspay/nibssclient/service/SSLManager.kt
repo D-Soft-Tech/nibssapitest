@@ -3,7 +3,6 @@ package com.netpluspay.nibssclient.service
 import android.annotation.SuppressLint
 import android.content.Context
 import android.util.Base64
-import com.netpluspay.nibssclient.exception.NibssClientException
 import com.netpluspay.nibssclient.exception.createNibssException
 import com.netpluspay.nibssclient.util.app.TerminalParams
 import com.netpluspay.nibssclient.util.app.TerminalParams.CLIENT_CERT_ASSET
@@ -19,7 +18,6 @@ import java.security.cert.Certificate
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 import java.security.spec.PKCS8EncodedKeySpec
-
 import javax.net.ssl.*
 
 object SSLManager {
@@ -44,7 +42,6 @@ object SSLManager {
         )
         return sslContext.socketFactory
     }
-
 
     private fun getKeyMangerFactory(context: Context): KeyManagerFactory? {
         if (TerminalParams.isClientCertInitialized().not())

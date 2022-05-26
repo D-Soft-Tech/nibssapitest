@@ -4,23 +4,21 @@ import com.netpluspay.nibssclient.util.Constants
 import com.netpluspay.nibssclient.util.toInt16
 
 enum class TransactionType {
-    //EFT TRAN TYPES
+    // EFT TRAN TYPES
     PURCHASE,
     PURCHASE_WITH_CASH_BACK, PURCHASE_WITH_ADDITIONAL_DATA, CASH_ADVANCE,
     REVERSAL, REFUND, PRE_AUTHORIZATION, PRE_AUTHORIZATION_COMPLETION, BALANCE, MINI_STATEMENT, LINK_ACCOUNT_INQUIRY,
     PIN_CHANGE, DEPOSIT, TRANSFER, BILL_PAYMENT, PREPAID, VOID, BILLER_LIST_DOWNLOAD, PRODUCT_LIST_DOWNLOAD,
-    BILLER_SUBSCRIPTION_INFO_DOWNLOAD, PAYMENT_VALIDATION,CASH,
-
+    BILLER_SUBSCRIPTION_INFO_DOWNLOAD, PAYMENT_VALIDATION, CASH,
 
     PAYXPRESS,
 
-    //NETWORK MGT TYPE
+    // NETWORK MGT TYPE
     TERMINAL_MASTER_KEY,
     TERMINAL_SESSION_KEY, TERMINAL_PIN_KEY,
     TERMINAL_PARAMETER_DOWNLOAD, CALL_HOME, DAILY_TRANSACTION_REPORT_DOWNLOAD, CA_PUBLIC_KEY_DOWNLOAD, EMV_APPLICATION_AID_DOWNLOAD,
     DYNAMIC_CURRENCY_CONVERSION, INITIAL_PIN_ENCRYPTION_KEY_DOWNLOAD_EMV, INITIAL_PIN_ENCRYPTION_KEY_DOWNLOAD_TRACK2_DATA,
     TRANZAXIS_WORKING_KEY_INQUIRY, TRANZAXIS_TRAFFIC_ENCRYPTION_WORKING_KEY, TRANZAXIS_ECHO_TEST;
-
 
     val code
         get() = when (this) {
@@ -82,23 +80,22 @@ enum class TransactionType {
             else -> Constants.MTI.NETWORK_MGT_REQUEST_MTI
         }.toInt16()
 
-
     override fun toString() = this.name.replace('_', ' ').toLowerCase().capitalize()
 
     val hasOriginalAmount: Boolean
-        get() =   when(this) {
+        get() = when (this) {
             REFUND, REVERSAL, PRE_AUTHORIZATION_COMPLETION -> true
             else -> false
         }
 
     val hasAdditionalAmount: Boolean
-        get() = when(this) {
+        get() = when (this) {
             PURCHASE_WITH_CASH_BACK -> true
             else -> false
         }
 
     val isReversible: Boolean
-        get() = when(this) {
+        get() = when (this) {
             PURCHASE,
             PURCHASE_WITH_ADDITIONAL_DATA,
             PURCHASE_WITH_CASH_BACK,
@@ -111,7 +108,4 @@ enum class TransactionType {
             PRE_AUTHORIZATION -> true
             else -> false
         }
-
 }
-
-

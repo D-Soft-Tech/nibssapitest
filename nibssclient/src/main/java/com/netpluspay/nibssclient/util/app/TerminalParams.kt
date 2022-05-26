@@ -2,8 +2,8 @@ package com.netpluspay.nibssclient.util.app
 
 
 object TerminalParams {
-    const val PROD_HOST = "epms.netpluspay.com"
-    const val PROD_PORT = 6868
+    const val PROD_HOST = "196.6.103.18"
+    const val PROD_PORT = 5016
     var TEST_HOST = "epms.test.netpluspay.com"
     var TEST_PORT = 6868
     var ON_TEST_ENV = false

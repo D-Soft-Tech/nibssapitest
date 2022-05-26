@@ -5,11 +5,12 @@ import androidx.room.Entity
 import androidx.room.Ignore
 import androidx.room.Index
 import androidx.room.PrimaryKey
-import java.util.ArrayList
+import com.danbamitale.epmslib.entities.TransactionType
 import com.netpluspay.nibssclient.util.Constants
 import com.netpluspay.nibssclient.util.tlv.TLVList
 import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
+import java.util.ArrayList
 
 @Entity(indices = [Index(value = ["RRN"], unique = true)])
 @Parcelize
@@ -68,7 +69,6 @@ val TransactionResponse.isApproved: Boolean
 val TransactionResponse.responseMessage: String
     get() = errorMessage ?: Constants.getResponseMessageFromCode(responseCode)
 
-
 val TransactionResponse.issuerAuthData91: String?
     get() {
         return responseDE55?.let {
@@ -76,7 +76,6 @@ val TransactionResponse.issuerAuthData91: String?
             tlvList.getTLVVL("91")
         }
     }
-
 
 val TransactionResponse.issuerScript71: String?
     get() {
@@ -94,10 +93,8 @@ val TransactionResponse.issuerScript72: String?
         }
     }
 
-
 val TransactionResponse.accountBalances: List<AccountBalance>
     get() = parseField54AdditionalAmount(this.additionalAmount_54)
-
 
 data class AccountBalance(
     val accountType: IsoAccountType,
@@ -107,12 +104,11 @@ data class AccountBalance(
     val amount: Long
 )
 
-
 private fun parseAdditionalAmountString(inputString: String): AccountBalance {
     if (inputString.length < 20) error("Invalid string")
 
     val accountType = IsoAccountType.parseIntAccountType(inputString.substring(0, 2).toInt())
-    val amountType = inputString.substring(2, 4);
+    val amountType = inputString.substring(2, 4)
     val currencyCode = inputString.substring(4, 7)
     val amountSign = inputString[7]
     val amount = inputString.substring(8, 20).toLong()
@@ -124,10 +120,10 @@ fun parseField54AdditionalAmount(inputString: String): List<AccountBalance> {
     if (inputString.length < 20) return listOf()
 
     val list = ArrayList<AccountBalance>()
-    var count = 0;
+    var count = 0
     do {
         list.add(parseAdditionalAmountString(inputString.substring(count, count + 20)))
-        count += 20;
+        count += 20
     } while (count + 20 <= inputString.length)
 
     return list
@@ -157,7 +153,6 @@ data class OriginalDataElements(
     var originalForwardingInstCode: String? = null
 )
 
-
 fun TransactionResponse.toOriginalDataElements() = OriginalDataElements(
     originalTransactionType = transactionType,
     originalAmount = amount,
@@ -173,6 +168,3 @@ enum class MessageReasonCode(val code: String) {
 
     CustomerCancellation("4000"), UnSpecified("4001"), CompletedPartially("4004"), Timeout("4021");
 }
-
-
-

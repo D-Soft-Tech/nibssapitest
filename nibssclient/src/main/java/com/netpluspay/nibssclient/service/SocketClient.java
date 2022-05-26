@@ -12,7 +12,7 @@ import javax.net.ssl.SSLSocket;
 public class SocketClient {
     public static String write(Context context, String payload) throws Exception {
         System.out.println(payload);
-        SSLSocket sslSocket = SSLClientManager.getSSLSocket(context, "epms.test.netpluspay.com", 6868);
+        SSLSocket sslSocket = SSLClientManager.getSSLSocket(context, "196.6.103.18", 5016);
         sslSocket.setSoTimeout(60000);
         sslSocket.setTcpNoDelay(true);
         sslSocket.setKeepAlive(true);

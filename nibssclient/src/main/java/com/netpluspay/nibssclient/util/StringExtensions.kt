@@ -5,7 +5,6 @@ import java.math.BigInteger
 import java.security.MessageDigest
 import java.security.NoSuchAlgorithmException
 
-
 /**
  * Pad a string to the left
  *
@@ -33,7 +32,7 @@ fun String.padLeft(length: Int, padChar: Char): String {
  * pad character
  * @return Padded string
  */
-fun String.padRight( length: Int, padChar: Char): String {
+fun String.padRight(length: Int, padChar: Char): String {
     val remaining = length - this.length
 
     var newData = this
@@ -53,10 +52,9 @@ fun String.maskPan(): String {
     return acqCode + etext + endCode
 }
 
-
 fun String.xor(key2: String): String {
-    val keyB1 = Utility.hexStringToByteArray(this); //+ key1.substring(0, 16))
-    val keyB2 = Utility.hexStringToByteArray(key2); //+ key2.substring(0, 16))
+    val keyB1 = Utility.hexStringToByteArray(this); // + key1.substring(0, 16))
+    val keyB2 = Utility.hexStringToByteArray(key2); // + key2.substring(0, 16))
 
     for (i in keyB2.indices) {
         keyB1[i] = (keyB1[i].toInt() xor keyB2[i].toInt()).toByte()
@@ -66,7 +64,7 @@ fun String.xor(key2: String): String {
 }
 
 @Throws(UnsupportedEncodingException::class)
-fun String.generateHash256Value( key: String): String {
+fun String.generateHash256Value(key: String): String {
     val m: MessageDigest
     var hashText: String? = null
     val actualKeyBytes = Utility.hexStringToByteArray(key)
@@ -96,9 +94,7 @@ fun String.generateHash256Value( key: String): String {
     }
 
     return hashText
-
 }
-
 
 fun String.hexByteArray() = Utility.hexStringToByteArray(this)
 

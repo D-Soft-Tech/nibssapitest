@@ -1,8 +1,12 @@
 package com.netpluspay.nibssclient.util
 
 object Constants {
+    const val DEFAULT_TERMINAL_ID = "2057H63U"
+    const val MARKETPLACE_STORE = "marketplace_store"
+    const val STORE_CREATED = "store_created"
     const val MTI_INDEX = 0
     const val BITMAP = 1
+    var USER_TYPE_NONE = -1
     const val PRIMARY_ACCOUNT_NUMBER_2 = 2
     const val PROCESSING_CODE_3 = 3
     const val AMOUNT_TRANSACTION_4 = 4
@@ -48,14 +52,52 @@ object Constants {
     const val ACCOUNT_IDENTIFICATION2_103 = 103
     const val POS_DATA_CODE_123 = 123
     const val SECONDARY_MESSAGE_HASH_VALUE_128 = 128
+    const val BASE_URL_FOR_LOGGING_TO_BACKEND = "https://device.netpluspay.com/"
 
+    // ======= Copied from netpos ====== //
+    const val STATE_PAYMENT_STAND_BY = 0
+    const val STATE_PAYMENT_STARTED = 1
+    const val STATE_PAYMENT_APPROVED = 2
+    const val HISTORY_ACTION = "history_action"
+    const val HISTORY_ACTION_DEFAULT = "Default"
+    const val HISTORY_ACTION_REPRINT = "Reprint"
+    const val HISTORY_ACTION_REFUND = "Refund"
+    const val HISTORY_ACTION_PREAUTH = "PreAuth"
+    const val HISTORY_ACTION_EOD = "End Of Day"
+    const val HISTORY_ACTION_CASH = "Cash"
+    const val TRANSACTION_TYPE = "transaction_type"
+    const val PREF_APP_TOKEN = "app_token"
+    const val PREF_USER_TOKEN = "user_token"
+    const val PREF_USER = "user"
+    const val PREF_AUTHENTICATED = "authenticated"
+    const val PREF_CONFIGURATION_DATA = "configuration_data"
+    const val PREF_KEYHOLDER = "pref_keyholder"
+    const val PREF_CONFIG_DATA = "pref_config_data"
+    const val PREF_LAST_LOCATION = "pref_last_location"
+    const val PREF_USE_STORM_TERMINAL_ID = "pref_use_storm_tid"
+    const val PREF_PARTNER_THRESHOLD = "pref_partner_threshold"
+    const val PREF_BILLS_TOKEN = "pref_bills_token"
+    const val PREF_PRINTER_SETTINGS = "pref_printer_settings"
+    const val PREF_VALUE_PRINT_CUSTOMER_COPY_ONLY = "print_customer_copy_only"
+    const val PREF_VALUE_PRINT_CUSTOMER_AND_MERCHANT_COPY = "print_merchant_and_customer_copy"
+    const val PREF_VALUE_PRINT_ASK_BEFORE_PRINTING = "ask_before_printing"
+    const val PREF_VALUE_PRINT_SMS = "send_sms"
+    const val LAST_POS_CONFIGURATION_TIME = "last_pos_configuration_time"
+    const val VEND_IP = "192.168.100.68"
+    const val VEND_PORT = 3535
+    const val VEND_PROD_IP = "vend.netpluspay.com"
+    const val VEND_PROD_PORT = 3535
+    const val TRANSACTION_LAST_LOADED_PAGE = "transaction_last_loaded_page"
+    const val PREF_REPRINT_PASSWORD = "reprint_password"
+
+    // ======= Copied from netpos ====== //
     fun getDownloadParameterManagementData(mgtCode: String, mainString: String): String {
         val lengthOfTag = 2
 
         val indexOfMgtCodeInMainString = mainString.indexOf(mgtCode)
 
         if (indexOfMgtCodeInMainString < 0)
-        //throw new IllegalArgumentException("Could not locate data");
+        // throw new IllegalArgumentException("Could not locate data");
             return ""
 
         val dataLenString = mgtCode.substring(lengthOfTag)
@@ -202,5 +244,4 @@ object Constants {
         const val NEW_WORKING_KEY_FOR_TRAFFIC_ENCRYPTION_INQUIRY = "95"
         const val ECHO_TEST = "99"
     }
-
 }

@@ -2,26 +2,19 @@ package com.netpluspay.nibssclient.models
 
 import com.netpluspay.nibssclient.util.tlv.TLVList
 
-
 data class CardData(
     val track2Data: String,
     val nibssIccSubset: String,
     val panSequenceNumber: String,
-    val posEntryMode: String = "051") {
+    val posEntryMode: String = "051"
+) {
 
     var pinBlock: String? = null
 
-//    var pan = getPan(track2Data)
-//    var serviceCode = getServiceCode(track2Data)
-//    var expiryDate = getExpiryDate(track2Data)
-//    var acquiringInstitutionIdCode = getAcquiringInstitutionIdCode(track2Data)
-
-//    fun init(){
-//        this.pan = getPan(track2Data)
-//        this.serviceCode = getServiceCode(track2Data)
-//        this.expiryDate = getExpiryDate(track2Data)
-//        this.acquiringInstitutionIdCode = getAcquiringInstitutionIdCode(track2Data)
-//    }
+    var pan = getPan(track2Data)
+    var serviceCode = getServiceCode(track2Data)
+    var expiryDate = getExpiryDate(track2Data)
+    var acquiringInstitutionIdCode = getAcquiringInstitutionIdCode(track2Data)
 
     companion object {
         val NIBSS_TAGS = arrayOf(
@@ -48,7 +41,6 @@ data class CardData(
             "8E"
         )
 
-
         fun getNibssTags(iccData: String): String {
             val tlvList = TLVList.fromBinary(iccData)
             val nibssIcc = StringBuilder()
@@ -60,7 +52,6 @@ data class CardData(
 
             return nibssIcc.toString()
         }
-        
 
         fun initCardDataFromTrack(fullIcc: String): CardData {
 
@@ -71,39 +62,42 @@ data class CardData(
                     nibssIcc.append(tlvList.getTLV(tag).toString())
                 }
             }
-            val posEntryMode = if (tlvList.getTLVVL("9F39").isNullOrEmpty()) "051" else tlvList.getTLVVL("9F39")
+            val posEntryMode =
+                if (tlvList.getTLVVL("9F39").isNullOrEmpty()) "051" else tlvList.getTLVVL("9F39")
             return CardData(
                 nibssIccSubset = nibssIcc.toString(),
-                        track2Data = tlvList.getTLVVL("57"),
-                        panSequenceNumber = tlvList.getTLVVL("5F34").padLeft(3, '0'),
-                        posEntryMode = posEntryMode
+                track2Data = tlvList.getTLVVL("57"),
+                panSequenceNumber = tlvList.getTLVVL("5F34").padLeft(3, '0'),
+                posEntryMode = posEntryMode
             )
         }
 
         fun getPan(track2Data: String, separatingChar: Char = 'D'): String {
-            val indexOfToken = track2Data.indexOf(separatingChar,0, true)
+            val indexOfToken = track2Data.indexOf(separatingChar, 0, true)
 
             return track2Data.substring(0, indexOfToken)
         }
 
         fun getExpiryDate(track2Data: String, separatingChar: Char = 'D'): String {
-            val indexOfToken = track2Data.indexOf(separatingChar,0, true)
+            val indexOfToken = track2Data.indexOf(separatingChar, 0, true)
             val indexOfExpiryDate = indexOfToken + 1
             val lengthOfExpiryDate = 4
             return track2Data.substring(indexOfExpiryDate, indexOfExpiryDate + lengthOfExpiryDate)
         }
 
         fun getServiceCode(track2Data: String, separatingChar: Char = 'D'): String {
-            val indexOfToken = track2Data.indexOf(separatingChar.toString(),0, true)
+            val indexOfToken = track2Data.indexOf(separatingChar.toString(), 0, true)
             val indexOfServiceCode = indexOfToken + 5
             val lengthOfServiceCode = 3
-            return track2Data.substring(indexOfServiceCode, indexOfServiceCode + lengthOfServiceCode)
+            return track2Data.substring(
+                indexOfServiceCode,
+                indexOfServiceCode + lengthOfServiceCode
+            )
         }
 
         fun getAcquiringInstitutionIdCode(track2Data: String): String {
             return track2Data.substring(0, 6)
         }
-
     }
 }
 

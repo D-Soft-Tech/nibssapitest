@@ -1,32 +1,45 @@
 package com.netpluspay.nibssclient.service
 
 import android.content.Context
-import android.util.Log
+import com.danbamitale.epmslib.entities.TransactionType
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.isw.gateway.TransactionProcessorWrapper
 import com.netpluspay.nibssclient.exception.createNibssException
 import com.netpluspay.nibssclient.models.*
+import com.netpluspay.nibssclient.util.SharedPrefManager
 import com.netpluspay.nibssclient.util.Utility
 import io.reactivex.Single
+import io.reactivex.disposables.CompositeDisposable
 
 object NibssApiWrapper {
     val gson = Gson()
     private val TAG = NibssApiWrapper::class.java.simpleName
+    private var iswPaymentProcessorObject: TransactionProcessorWrapper? = null
+    private val compositeDisposable: CompositeDisposable by lazy { CompositeDisposable() }
+    private val user: User = User()
 
     @JvmStatic
-    fun configureTerminal(context: Context, params: ConfigurationParams): Single<KeyHolder> =
-        Single.fromCallable {
-            if (params.validate().not())
-                throw "{\"code\":500,\"error\":\"Terminal Id and/or terminalSerial absent\"}".createNibssException(
-                    params.action
-                )
-            val req = gson.toJson(params)
-            val response = NibssApiClient.write(context, req)
-            val keyHolder = gson.fromJson(response, KeyHolder::class.java)
-            if (keyHolder == null || keyHolder.isValid.not())
-                throw response.createNibssException(params.action)
-            keyHolder
-        }
+    fun logUser(inputUserData: String) {
+        val userData = gson.fromJson(inputUserData, UserData::class.java)
+        SharedPrefManager.setUserData(userData)
+    }
+
+//    @JvmStatic
+//    fun configureTerminal(context: Context, params: ConfigurationParams): Single<KeyHolder> =
+//        Single.fromCallable {
+//            if (params.validate().not())
+//                throw "{\"code\":500,\"error\":\"Terminal Id and/or terminalSerial absent\"}".createNibssException(
+//                    params.action
+//                )
+//            val req = gson.toJson(params)
+//            val response = NibssApiClient.write(context, req)
+//            val keyHolder = gson.fromJson(response, KeyHolder::class.java)
+//            if (keyHolder == null || keyHolder.isValid.not())
+//                throw response.createNibssException(params.action)
+//            Singletons.settKeyHolder(keyHolder)
+//            keyHolder
+//        }
 
     @JvmStatic
     fun callHome(context: Context, params: ConfigurationParams): Single<String> =
@@ -50,9 +63,9 @@ object NibssApiWrapper {
                     params.action
                 )
             if (params.validate().not())
-            throw "{\"code\":500,\"error\":\"Error, check your inputs\"}".createNibssException(
-                params.action
-            )
+                throw "{\"code\":500,\"error\":\"Error, check your inputs\"}".createNibssException(
+                    params.action
+                )
             val req = gson.toJson(params)
             val response = NibssApiClient.write(context, req)
             val transactionResponse = gson.fromJson(response, TransactionResponse::class.java)

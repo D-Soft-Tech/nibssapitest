@@ -4,13 +4,13 @@ import android.content.Context
 import com.netpluspay.nibssclient.util.app.TerminalParams
 import com.netpluspay.nibssclient.util.app.TerminalParams.CONNECTION_HOST
 import com.netpluspay.nibssclient.util.app.TerminalParams.CONNECTION_PORT
+import timber.log.Timber
 import java.io.BufferedReader
 import java.io.InputStreamReader
 import java.io.PrintWriter
 import java.net.InetSocketAddress
 import java.net.Socket
 import kotlin.jvm.Throws
-
 
 object NibssApiClient {
 
@@ -23,20 +23,23 @@ object NibssApiClient {
                 println(socket.isClosed)
             }
             if (::socket.isInitialized.not() || socket.isClosed)
-                socket = (if (TerminalParams.USE_SSL.not()) {
-                    Socket().apply {
-                        soTimeout = 60000
-                        tcpNoDelay = true
-                        keepAlive = true
-                        connect(InetSocketAddress(CONNECTION_HOST, CONNECTION_PORT))
-                    }
-                } else
-                    SSLManager.getSSLSocket(context).apply {
-                        soTimeout = 60000
-                        tcpNoDelay = true
-                        keepAlive = true
-                        startHandshake()
-                    }).apply {
+                socket = (
+                    if (TerminalParams.USE_SSL.not()) {
+                        Socket().apply {
+                            soTimeout = 60000
+                            tcpNoDelay = true
+                            keepAlive = true
+                            connect(InetSocketAddress(CONNECTION_HOST, CONNECTION_PORT))
+                        }
+                    } else
+                        SSLManager.getSSLSocket(context).apply {
+                            Timber.d("SOCKET==>${inetAddress}")
+                            soTimeout = 60000
+                            tcpNoDelay = true
+                            keepAlive = true
+                            startHandshake()
+                        }
+                    ).apply {
                     println("Connected")
                 }
             socket.use {
