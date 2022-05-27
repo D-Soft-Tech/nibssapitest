@@ -8,14 +8,9 @@ import com.google.gson.Gson
 import com.netpluspay.nibssclient.models.MakePaymentParams
 import com.netpluspay.nibssclient.models.UserData
 import com.netpluspay.nibssclient.service.NewNibssApiWrapper
-import dagger.hilt.android.AndroidEntryPoint
 import timber.log.Timber
-import javax.inject.Inject
 
-@AndroidEntryPoint
-class MainActivity @Inject constructor() : AppCompatActivity() {
-    @Inject
-    lateinit var newNibssApiWrapper: NewNibssApiWrapper
+class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -28,7 +23,7 @@ class MainActivity @Inject constructor() : AppCompatActivity() {
             "Marwa",
             "Doyin"
         )
-        newNibssApiWrapper.init(this, false, Gson().toJson(userData))
+        NewNibssApiWrapper.init(this, false, Gson().toJson(userData))
     }
 
     fun makePayment(view: View) {
@@ -53,8 +48,13 @@ class MainActivity @Inject constructor() : AppCompatActivity() {
             "051"
         )
         Timber.e(card.toString())
-        val makePaymentParams = MakePaymentParams(amount = 200, terminalId = "2033ALZP", cardData = card)
-        newNibssApiWrapper.makePayment(this, "2033ALZP", Gson().toJson(makePaymentParams), "OLOYEDE ADEBAYO")
+        val makePaymentParams =
+            MakePaymentParams(amount = 200, terminalId = "2033ALZP", cardData = card)
+        NewNibssApiWrapper.makePayment(
+            this,
+            "2033ALZP",
+            Gson().toJson(makePaymentParams),
+            "OLOYEDE ADEBAYO"
+        )
     }
 }
-

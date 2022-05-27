@@ -22,7 +22,9 @@ import com.isw.iswclient.iswapiclient.getTokenClient
 import com.isw.iswclient.request.IswParameters
 import com.isw.iswclient.request.TokenPassportRequest
 import com.netpluspay.nibssclient.dao.TransactionResponseDao
+import com.netpluspay.nibssclient.database.AppDatabase
 import com.netpluspay.nibssclient.models.* // ktlint-disable no-wildcard-imports
+import com.netpluspay.nibssclient.network.StormApiClient
 import com.netpluspay.nibssclient.network.StormApiService
 import com.netpluspay.nibssclient.service.NibssApiWrapper.gson
 import com.netpluspay.nibssclient.util.Constants.LAST_POS_CONFIGURATION_TIME
@@ -42,23 +44,18 @@ import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.schedulers.Schedulers
 import timber.log.Timber
-import javax.inject.Inject
-import javax.inject.Singleton
 
 const val CONFIGURATION_STATUS = "terminal_configuration_status"
 const val CONFIGURATION_ACTION = "com.woleapp.netpos.TERMINAL_CONFIGURATION"
 const val DEFAULT_TERMINAL_ID = "2057H63U"
 
-@Singleton
-class NewNibssApiWrapper @Inject constructor() {
-    @Inject
-    lateinit var transactionResponseDao: TransactionResponseDao
+object NewNibssApiWrapper {
+    private lateinit var transactionResponseDao: TransactionResponseDao
     private var amountDbl = 0.0
     private var amountLong = 0L
-    var transResp: TransactionResponse? = null
+    private var transResp: TransactionResponse? = null
 
-    @Inject
-    lateinit var stormApiService: StormApiService
+    private val stormApiService: StormApiService = StormApiClient.getStormApiLoginInstance()
     private var configurationData: ConfigurationData = getSavedConfigurationData()
     private val disposables = CompositeDisposable()
     private var connectionData: ConnectionData = ConnectionData(
@@ -112,6 +109,7 @@ class NewNibssApiWrapper @Inject constructor() {
         configureSilently: Boolean = false,
         serializedUserData: String
     ) {
+        transactionResponseDao = AppDatabase.getDatabaseInstance(context).transactionResponseDao()
         logUser(context, serializedUserData)
         setCurrentlyLoggedInUser()
         setTerminalId()
