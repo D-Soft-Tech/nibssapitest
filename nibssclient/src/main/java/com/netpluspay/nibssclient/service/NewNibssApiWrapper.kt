@@ -13,7 +13,6 @@ import com.danbamitale.epmslib.entities.TransactionResponse
 import com.danbamitale.epmslib.entities.TransactionType
 import com.danbamitale.epmslib.processors.TerminalConfigurator
 import com.danbamitale.epmslib.processors.TransactionProcessor
-import com.danbamitale.epmslib.utils.Event
 import com.danbamitale.epmslib.utils.IsoAccountType
 import com.danbamitale.epmslib.utils.MessageReasonCode
 import com.google.gson.Gson
@@ -70,7 +69,6 @@ object NewNibssApiWrapper {
     private var currentlyLoggedInUser: UserData? = null
     private var isConfigurationInProcess = false
     private var configurationStatus = -1
-    private val mutableLiveData = MutableLiveData(Event(-99))
     private val sendIntent = Intent(CONFIGURATION_ACTION)
     private var terminalConfigurator: TerminalConfigurator =
         TerminalConfigurator(connectionData)
@@ -128,10 +126,6 @@ object NewNibssApiWrapper {
         configurationStatus = 0
         sendIntent.putExtra(CONFIGURATION_STATUS, configurationStatus)
         localBroadcastManager.sendBroadcast(sendIntent)
-        if (configureSilently.not()) {
-            mutableLiveData.value = Event(configurationStatus)
-            mutableLiveData.value = Event(-99)
-        }
         val req = when {
             DateUtils.isToday(Prefs.getLong(LAST_POS_CONFIGURATION_TIME, 0)).not() -> {
                 Timber.e("last configuration time was not today, configure terminal now")
@@ -158,10 +152,6 @@ object NewNibssApiWrapper {
                 error?.let {
                     // TerminalManager.getInstance().beep(context, TerminalManager.BEEP_MODE_FAILURE)
                     configurationStatus = -1
-                    if (configureSilently.not()) {
-                        mutableLiveData.value = Event(configurationStatus)
-                        mutableLiveData.value = Event(-99)
-                    }
                     sendIntent.putExtra(CONFIGURATION_STATUS, configurationStatus)
                     localBroadcastManager.sendBroadcast(sendIntent)
                     Timber.e(it)
@@ -176,10 +166,6 @@ object NewNibssApiWrapper {
                     configurationStatus = 1
                     sendIntent.putExtra(CONFIGURATION_STATUS, configurationStatus)
                     localBroadcastManager.sendBroadcast(sendIntent)
-                    if (configureSilently.not()) {
-                        mutableLiveData.value = Event(configurationStatus)
-                        mutableLiveData.value = Event(-99)
-                    }
                     Timber.e("Config data set")
                     disposeDisposables()
                 }

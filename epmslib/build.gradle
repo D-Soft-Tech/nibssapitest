@@ -8,6 +8,13 @@ apply plugin: 'kotlin-parcelize'
 android {
     compileSdkVersion 31
 
+    lintOptions {
+        abortOnError false
+    }
+
+    lintOptions {
+        checkReleaseBuilds false
+    }
 
     defaultConfig {
         minSdkVersion 21

@@ -5,6 +5,67 @@ plugins {
     id 'maven-publish'
     id 'kotlin-parcelize'
     id 'org.jetbrains.kotlin.android'
+    id 'maven'
+}
+
+configurations {
+    deployerJar
+}
+
+uploadArchives {
+    configuration = configurations.archives
+    repositories.mavenDeployer {
+        pom.groupId = "com.netpluspay.nibssclient" //Ex. "br.com.example"
+        pom.artifactId = "netplus-payment" //Ex. "maps-project"
+        pom.version = "1.0" //Ex. "1.0/1.0-SNAPSHOT"
+//        configuration = configurations.deployerJar
+//        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
+
+//        configuration = configurations.deployerJar
+        repository(url: "git:releases://git@github.com:D-Soft-Tech/test-lib-pub.git") {
+            authentication(
+                    userName: "d-soft-tech",
+                    password: "oloyede0828"
+            )
+        }
+        snapshotRepository(url: "git:snapshot://git@github.com:D-Soft-Tech/test-lib-pub.git"){
+            authentication(
+                    userName: "d-soft-tech", //Repository user name
+                    password: "oloyede0828" //Repository password
+            )
+        }
+        pom.project {
+            name 'netplus-payment-lib'//Optional
+            packaging 'aar' //Type of packing sent, could be apk if it is your goal.
+            description 'Netplus payment library for partners' //Optional
+            url "https://github.com/D-Soft-Tech/test-lib-pub"
+            scm {
+                url "https://github.com/D-Soft-Tech/test-lib-pub"
+                connection "https://github.com/D-Soft-Tech/test-lib-pub.git"
+                developerConnection "https://github.com/D-Soft-Tech?tab=repositories"
+            }
+            licenses {
+                license {
+                    name "The Apache Software License, Version 2.0"
+                    url "http://www.apache.org/licenses/LICENSE-2.0.txt"
+                    distribution "netplus-payment-lib"
+                }
+            }
+            developers {
+                developer {
+                    id "d-soft-tech"
+                    name "Oloyede Adebayo Olawale"
+                    email "oloyedeadebayoolawale@gmail.com"
+                }
+            }
+        }
+    }
+}
+allprojects {
+    repositories {
+        mavenCentral()
+        maven { url "https://raw.github.com/synergian/wagon-git/releases" }
+    }
 }
 
 android {
@@ -19,6 +80,14 @@ android {
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         consumerProguardFiles "consumer-rules.pro"
+    }
+
+    lintOptions {
+        abortOnError false
+    }
+
+    lintOptions {
+        checkReleaseBuilds false
     }
 
     buildTypes {
@@ -39,6 +108,9 @@ android {
 dependencies {
     def lifecycle_version = "2.4.1"
     def paging_version = "3.1.1"
+
+    implementation fileTree(dir: 'libs', include: ['*.jar','*.aar'])
+    deployerJar "ar.com.synergian:wagon-git:0.2.3"
 
     implementation "androidx.paging:paging-runtime:$paging_version"
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycle_version"
