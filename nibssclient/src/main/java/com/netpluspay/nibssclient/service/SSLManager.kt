@@ -18,7 +18,7 @@ import java.security.cert.Certificate
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
 import java.security.spec.PKCS8EncodedKeySpec
-import javax.net.ssl.*
+import javax.net.ssl.* // ktlint-disable no-wildcard-imports
 
 object SSLManager {
 

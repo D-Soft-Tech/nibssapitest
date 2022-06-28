@@ -10,6 +10,7 @@ import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory
 import retrofit2.converter.gson.GsonConverterFactory
+import retrofit2.converter.simplexml.SimpleXmlConverterFactory
 import retrofit2.http.Body
 import retrofit2.http.Header
 import retrofit2.http.Headers
@@ -48,7 +49,10 @@ private fun getBaseOkhttpClientBuilder(): OkHttpClient.Builder {
     return okHttpClientBuilder
 }
 
-val getTokenClient: IswService = baseBuilder
+val getTokenClient: IswService = Retrofit.Builder()
+    .client(getBaseOkhttpClientBuilder().build())
+    .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
+    .addConverterFactory(SimpleXmlConverterFactory.create())
     .baseUrl("https://saturn.interswitchng.com:443/")
     .build().create(IswService::class.java)
 
@@ -59,7 +63,10 @@ const val IPEK_TEST = ""
 const val KSN_LIVE = ""
 const val IPEK_LIVE = ""
 
-val iswTransactionClient: IswService = baseBuilder
+val iswTransactionClient: IswService = Retrofit.Builder()
+    .client(getBaseOkhttpClientBuilder().build())
+    .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
+    .addConverterFactory(SimpleXmlConverterFactory.create())
     .baseUrl(live)
     .build().create(IswService::class.java)
 

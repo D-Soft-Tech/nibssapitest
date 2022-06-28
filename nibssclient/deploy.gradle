@@ -15,8 +15,8 @@ uploadArchives {
         configuration = configurations.deployerJar
         repository(url: "git:releases://git@github.com:D-Soft-Tech/test-lib-pub.git") {
             authentication(
-                    userName: "${repository_user}",
-                    password: "${repository_password}"
+                    userName: "d-soft-tech",
+                    password: "oloyede0828"
             )
         }
         snapshotRepository(url: "git:snapshot://git@github.com:D-Soft-Tech/test-lib-pub.git"){

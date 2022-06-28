@@ -30,6 +30,9 @@ data class KeyHolder
     @PrimaryKey
     var id = 1
 
+    val isValid: Boolean
+        get() = clearPinKey != null && pinKey != null && masterKey != null
+
     init {
         println("initialized keyholder")
     }

@@ -21,7 +21,7 @@ uploadArchives {
 //        configuration = configurations.deployerJar
 //        configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) }
 
-//        configuration = configurations.deployerJar
+//        configuration = configurations.deployerJar 'github.com:D-Soft-Tech/test-lib-pub.git' D-Soft-Tech/test-lib-pub/releases
         repository(url: "git:releases://git@github.com:D-Soft-Tech/test-lib-pub.git") {
             authentication(
                     userName: "d-soft-tech",
@@ -59,12 +59,6 @@ uploadArchives {
                 }
             }
         }
-    }
-}
-allprojects {
-    repositories {
-        mavenCentral()
-        maven { url "https://raw.github.com/synergian/wagon-git/releases" }
     }
 }
 

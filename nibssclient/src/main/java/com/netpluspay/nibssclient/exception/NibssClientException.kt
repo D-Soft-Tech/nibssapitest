@@ -1,9 +1,7 @@
 package com.netpluspay.nibssclient.exception
 
 import android.util.Log
-import com.netpluspay.nibssclient.service.NibssApiWrapper
-import com.netpluspay.nibssclient.service.NibssApiWrapper.gson
-import java.lang.Exception
+import com.google.gson.Gson
 
 class NibssClientException(messages: String?, val nibssError: NibssError?) : Exception(messages) {
     init {
@@ -20,7 +18,7 @@ class NibssClientException(messages: String?, val nibssError: NibssError?) : Exc
 
 fun String.createNibssException(action: String): NibssClientException {
     val nibssError: NibssClientException.NibssError? =
-        gson.fromJson(this, NibssClientException.NibssError::class.java)
+        Gson().fromJson(this, NibssClientException.NibssError::class.java)
     nibssError?.let {
         val message = it.error ?: "Gateway Error, Retry"
         val possibleCause = when {

@@ -8,9 +8,11 @@ import com.google.gson.Gson
 import com.netpluspay.nibssclient.models.MakePaymentParams
 import com.netpluspay.nibssclient.models.UserData
 import com.netpluspay.nibssclient.service.NewNibssApiWrapper
+import io.reactivex.disposables.CompositeDisposable
 import timber.log.Timber
 
 class MainActivity : AppCompatActivity() {
+    private val compositeDisposable: CompositeDisposable = CompositeDisposable()
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -50,11 +52,18 @@ class MainActivity : AppCompatActivity() {
         Timber.e(card.toString())
         val makePaymentParams =
             MakePaymentParams(amount = 200, terminalId = "2033ALZP", cardData = card)
+
         NewNibssApiWrapper.makePayment(
             this,
             "2033ALZP",
             Gson().toJson(makePaymentParams),
-            "OLOYEDE ADEBAYO"
+            "OLOYEDE ADEBAYO",
+            ""
         )
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        compositeDisposable.clear()
     }
 }
