@@ -3,10 +3,10 @@ package com.netpluspay.nibssclient.service
 import android.content.Context
 import android.content.Intent
 import android.text.format.DateUtils
-import androidx.lifecycle.LiveData
+import android.util.Log
 import androidx.lifecycle.MutableLiveData
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
-import com.danbamitale.epmslib.entities.* // ktlint-disable no-wildcard-imports
+import com.danbamitale.epmslib.entities.*
 import com.danbamitale.epmslib.entities.KeyHolder
 import com.danbamitale.epmslib.entities.TransactionResponse
 import com.danbamitale.epmslib.entities.TransactionType
@@ -18,13 +18,13 @@ import com.google.gson.Gson
 import com.isw.gateway.TransactionProcessorWrapper
 import com.netpluspay.nibssclient.dao.TransactionResponseDao
 import com.netpluspay.nibssclient.database.AppDatabase
-import com.netpluspay.nibssclient.models.* // ktlint-disable no-wildcard-imports
+import com.netpluspay.nibssclient.models.*
 import com.netpluspay.nibssclient.network.StormApiClient
 import com.netpluspay.nibssclient.network.StormApiService
 import com.netpluspay.nibssclient.util.Constants.LAST_POS_CONFIGURATION_TIME
 import com.netpluspay.nibssclient.util.Constants.PREF_CONFIG_DATA
 import com.netpluspay.nibssclient.util.Constants.PREF_KEYHOLDER
-import com.netpluspay.nibssclient.util.RandomNumUtil
+import com.netpluspay.nibssclient.util.RandomNumUtil.mapDanbamitaleResponseToResponseWithRrn
 import com.netpluspay.nibssclient.util.SharedPrefManager
 import com.netpluspay.nibssclient.util.Singletons
 import com.netpluspay.nibssclient.util.Singletons.getSavedConfigurationData
@@ -206,8 +206,9 @@ object NewNibssApiWrapper {
         terminalId: String? = "",
         makePaymentParams: String,
         cardScheme: String,
-        cardHolder: String
-    ): Single<TransactionResponse?> {
+        cardHolder: String,
+        remark: String
+    ): Single<TransactionWithRemark?> {
         val params = gson.fromJson(makePaymentParams, MakePaymentParams::class.java)
         validateField(params.amount)
         return makePaymentViaNibss(
@@ -216,7 +217,8 @@ object NewNibssApiWrapper {
             terminalId,
             makePaymentParams,
             cardScheme,
-            cardHolder
+            cardHolder,
+            remark
         )
     }
 
@@ -226,8 +228,9 @@ object NewNibssApiWrapper {
         terminalId: String? = "",
         makePaymentParams: String,
         cardScheme: String,
-        cardHolder: String
-    ): Single<TransactionResponse?> {
+        cardHolder: String,
+        remark: String
+    ): Single<TransactionWithRemark?> {
 
         Timber.d("CALLING_ONLY_NIBSS")
         val transactionType =
@@ -274,6 +277,9 @@ object NewNibssApiWrapper {
         val processor = TransactionProcessor(hostConfig)
 //        transactionState.value = Constants.STATE_PAYMENT_STARTED
         return processor.processTransaction(context, requestData, params.cardData)
+            .doOnError {
+                Log.d("ERROR1", it.localizedMessage.toString())
+            }
             .onErrorResumeNext {
                 processor.rollback(context, MessageReasonCode.Timeout)
             }
@@ -289,9 +295,6 @@ object NewNibssApiWrapper {
                 it.cardLabel = cardScheme
                 it.amount = requestData.amount
                 lastTransactionResponse.postValue(it)
-                Timber.e(it.toString())
-                Timber.e(it.responseCode)
-                Timber.e(it.responseMessage)
                 val message =
                     (if (it.responseCode == "00") "Transaction Approved" else "Transaction Not approved")
                 Timber.d("RESPONSE=>$it")
@@ -305,19 +308,20 @@ object NewNibssApiWrapper {
                     Timber.d(Singletons.gson.toJson(it))
                     updateTransactionInBackendAfterMakingPayment(
                         transactionToLog.transactionResponse.rrn,
-                        RandomNumUtil.mapDanbamitaleResponseToResponseX(resp),
+                        mapDanbamitaleResponseToResponseWithRrn(resp, remark),
                         "APPROVED"
                     )
                 } else {
                     updateTransactionInBackendAfterMakingPayment(
                         rrn = transactionToLog.transactionResponse.rrn,
-                        transactionResponse = RandomNumUtil.mapDanbamitaleResponseToResponseX(
-                            resp
+                        transactionResponse = mapDanbamitaleResponseToResponseWithRrn(
+                            resp,
+                            remark = remark
                         ),
                         status = resp.responseMessage
                     )
                 }
-                Single.just(resp)
+                Single.just(mapDanbamitaleResponseToResponseWithRrn(resp, remark))
             }
     }
 
@@ -339,10 +343,18 @@ object NewNibssApiWrapper {
 
     private fun updateTransactionInBackendAfterMakingPayment(
         rrn: String,
-        transactionResponse: TransactionResponseX,
+        transactionResponse: TransactionWithRemark,
         status: String
-    ): Single<LogToBackendResponse> {
+    ) {
         val dataToLog = DataToLogAfterConnectingToNibss(status, transactionResponse, rrn)
-        return stormApiService.updateLogAfterConnectingToNibss(rrn, dataToLog)
+        compositeDisposable.add(
+            stormApiService.updateLogAfterConnectingToNibss(rrn, dataToLog)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe { t1, t2 ->
+                    t1?.let { Timber.d(it.message) }
+                    t2?.let { Timber.d(it.localizedMessage) }
+                }
+        )
     }
 }

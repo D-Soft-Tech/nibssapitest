@@ -5,7 +5,7 @@ import java.util.* // ktlint-disable no-wildcard-imports
 
 data class DataToLogAfterConnectingToNibss(
     val status: String,
-    val transactionResponse: TransactionResponseX,
+    val transactionResponse: TransactionWithRemark,
     val rrn: String
 )
 
@@ -17,6 +17,39 @@ data class LogToBackendResponse(
 
 data class ResponseBodyAfterLoginToBackend(
     val message: String
+)
+
+data class TransactionWithRemark(
+    val AID: String,
+    val rrn: String,
+    val STAN: String,
+    val TSI: String,
+    val TVR: String,
+    val accountType: String,
+    val acquiringInstCode: String,
+    val additionalAmount_54: String,
+    val amount: Int,
+    val appCryptogram: String,
+    val authCode: String,
+    val cardExpiry: String,
+    val cardHolder: String,
+    val cardLabel: String,
+    val id: Int,
+    val localDate_13: String,
+    val localTime_12: String,
+    val maskedPan: String,
+    val merchantId: String,
+    val originalForwardingInstCode: String,
+    val otherAmount: Int,
+    val otherId: String,
+    val responseCode: String,
+    val responseDE55: String,
+    var responseMessage: String,
+    val terminalId: String,
+    val transactionTimeInMillis: Long,
+    val transactionType: String,
+    val transmissionDateTime: String,
+    val remark: String = ""
 )
 
 data class TransactionResponseX(
@@ -44,6 +77,7 @@ data class TransactionResponseX(
     val otherId: String,
     val responseCode: String,
     val responseDE55: String,
+    var responseMessage: String,
     val terminalId: String,
     val transactionTimeInMillis: Long,
     val transactionType: String,
@@ -97,5 +131,5 @@ data class TransactionResponseX(
 
 data class TransactionToLogBeforeConnectingToNibbs(
     val status: String,
-    val transactionResponse: TransactionResponseX
+    val transactionResponse: TransactionWithRemark
 )

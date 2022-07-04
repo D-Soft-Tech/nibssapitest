@@ -5,6 +5,7 @@ import com.danbamitale.epmslib.entities.* // ktlint-disable no-wildcard-imports
 import com.danbamitale.epmslib.entities.TransactionResponse
 import com.netpluspay.nibssclient.models.KeyHolder
 import com.netpluspay.nibssclient.models.TransactionResponseX
+import com.netpluspay.nibssclient.models.TransactionWithRemark
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.* // ktlint-disable no-wildcard-imports
@@ -93,10 +94,48 @@ object RandomNumUtil {
                 otherId = otherId,
                 responseCode = responseCode,
                 responseDE55 = responseDE55 ?: "",
+                responseMessage = responseMessage,
                 terminalId = terminalId,
                 transactionTimeInMillis = transactionTimeInMillis,
                 transactionType = transactionType.name,
                 transmissionDateTime = getCurrentDateTime()
+            )
+        }
+    }
+
+    fun mapDanbamitaleResponseToResponseWithRrn(input: TransactionResponse, remark: String): TransactionWithRemark {
+        with(input) {
+            return TransactionWithRemark(
+                AID = AID,
+                rrn = RRN,
+                STAN = STAN,
+                TSI = TSI,
+                TVR = TVR,
+                accountType = accountType.name,
+                acquiringInstCode = acquiringInstCode,
+                additionalAmount_54 = additionalAmount_54,
+                amount = amount.toInt(),
+                appCryptogram = appCryptogram,
+                authCode = authCode,
+                cardExpiry = cardExpiry,
+                cardHolder = cardHolder,
+                cardLabel = cardLabel,
+                id = id.toInt(),
+                localDate_13 = localDate_13,
+                localTime_12 = localTime_12,
+                maskedPan = maskedPan,
+                merchantId = merchantId,
+                originalForwardingInstCode = originalForwardingInstCode,
+                otherAmount = otherAmount.toInt(),
+                otherId = otherId,
+                responseCode = responseCode,
+                responseDE55 = responseDE55 ?: "",
+                responseMessage = responseMessage,
+                terminalId = terminalId,
+                transactionTimeInMillis = transactionTimeInMillis,
+                transactionType = transactionType.name,
+                transmissionDateTime = getCurrentDateTime(),
+                remark = remark
             )
         }
     }

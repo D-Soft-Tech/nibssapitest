@@ -3,7 +3,7 @@ package com.netpluspay.nibssclient.util
 import com.danbamitale.epmslib.entities.TransactionRequestData
 import com.danbamitale.epmslib.entities.TransactionType
 import com.danbamitale.epmslib.utils.IsoTimeManager
-import com.netpluspay.nibssclient.models.*
+import com.netpluspay.nibssclient.models.* // ktlint-disable no-wildcard-imports
 import com.netpluspay.nibssclient.util.RandomNumUtil.formattedTime
 import com.netpluspay.nibssclient.util.RandomNumUtil.generateRandomRrn
 import com.netpluspay.nibssclient.util.RandomNumUtil.getCurrentDateTime
@@ -93,13 +93,16 @@ object Utility {
 
     fun getCustomRrn() = IsoTimeManager().fullDate.substring(2, 14)
 
-    fun MakePaymentParams.getTransactionResponseToLog(cardScheme: String, requestData: TransactionRequestData) =
+    fun MakePaymentParams.getTransactionResponseToLog(
+        cardScheme: String,
+        requestData: TransactionRequestData
+    ) =
         this.cardData?.expiryDate?.let {
             SharedPrefManager.getUserData().customerName.let { it1 ->
                 SharedPrefManager.getUserData().partnerId.let { it2 ->
                     TransactionToLogBeforeConnectingToNibbs(
                         status = "PENDING",
-                        TransactionResponseX(
+                        TransactionWithRemark(
                             AID = "",
                             rrn = getCustomRrn(),
                             STAN = generateRandomRrn(6),
@@ -127,7 +130,9 @@ object Utility {
                             terminalId = SharedPrefManager.getUserData().terminalId,
                             transactionTimeInMillis = 0,
                             transactionType = requestData.transactionType.name,
-                            transmissionDateTime = getCurrentDateTime()
+                            transmissionDateTime = getCurrentDateTime(),
+                            remark = remark ?: "",
+                            responseMessage = ""
                         )
                     )
                 }
