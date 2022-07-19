@@ -2,6 +2,7 @@ package com.netpluspay.nibssclient.util
 
 object Constants {
     const val DEFAULT_TERMINAL_ID = "2057H63U"
+    const val ISW_TOKEN = "TokenForIsw";
     const val MARKETPLACE_STORE = "marketplace_store"
     const val STORE_CREATED = "store_created"
     const val MTI_INDEX = 0

@@ -2,11 +2,20 @@ package ng.com.netpos.nibssapitest
 
 import android.os.Bundle
 import android.util.Log
+import android.view.View
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.danbamitale.epmslib.entities.CardData
 import com.google.gson.Gson
+import com.netpluspay.netpossdk.emv.CardReadResult
+import com.netpluspay.netpossdk.emv.CardReaderEvent
+import com.netpluspay.netpossdk.emv.CardReaderService
+import com.netpluspay.nibssclient.models.IsoAccountType
 import com.netpluspay.nibssclient.models.MakePaymentParams
+import com.netpluspay.nibssclient.models.UserData
 import com.netpluspay.nibssclient.service.NewNibssApiWrapper
+import com.pos.sdk.emvcore.POIEmvCoreManager
+import io.reactivex.Single
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.schedulers.Schedulers
@@ -14,22 +23,31 @@ import timber.log.Timber
 
 class MainActivity : AppCompatActivity() {
     private val compositeDisposable: CompositeDisposable = CompositeDisposable()
+    var newNibssApiWrapper: NewNibssApiWrapper = NewNibssApiWrapper
+    private lateinit var userData: UserData
+    private lateinit var cardResult: CardReadResult
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-//        val userData = UserData(
-//            "Netplus",
-//            "DigiAsteriks",
+        userData = UserData(
+            "Netplus",
+            "DigiAsteriks",
 //            "5de231d9-1be0-4c31-8658-6e15892f2b83",
-//            "2033ALZP",
-//            "1142016190000471",
-//            "Marwa",
-//            "Doyin"
-//        )
-//        NewNibssApiWrapper.init(this, false, Gson().toJson(userData))
+            "9E89FFBD-9968-4F69-96DB-4E1250F14D55",
+            "2033ALWT",
+            "1142016190000925", // "1142016190000471",
+            "Marwa",
+            "Doyin"
+        )
+        newNibssApiWrapper.logUser(this, Gson().toJson(userData))
+        newNibssApiWrapper.init(this, false, Gson().toJson(userData))
     }
 
-    fun makePayment() {
+    fun makePayment(v: View) {
+        readCard()
+    }
+
+    fun makePayment2(v: View) {
         val kudivisaeerr =
             "820238009F360200939F2701809F34034103029F1E086D6F726566756E319F100706011203A4B0109F3303E0F8C89F3501229F37045FD9345A9F01063132333435369F03060000000000008104000000C89F02060000000002005F24032311305F25032010205A0848484211638175015F3401019F150230319F160F3030303030303030303030303030309F1A0205669F1C08313233313233313257104848421163817501D2311226180133195F2A0205669F21031541179C01008E1800000000000000004105440502054103440342035E031F029F0D0598409C98009F0E0500100000009F4005FF80F000019F2608A924F203659E06759F0702FF809A032102225F280205669F090200009F4104000000009F0F0598409C98005F201A434F534D494320494E54454C4C4947454E542F504F5320544541950508800000009B02E8009F0607A0000000031010500C5669736120507265706169648407A0000000031010"
         // val iccData = "820238009F360201249F2701809F34034103029F1E086D6F726566756E319F100706010A03A4A0009F3303E0F8C89F3501229F370487336E659F01063132333435369F03060000000000008104000000649F02060000000001005F24032309305F25032009015A0841874518029592725F3401029F150230319F160F3030303030303030303030303030309F1A0205669F1C08313233313233313257104187451802959272D2309226101571235F2A0205669F21031651309C01008E1200000000000000004103440342035E031F039F0D05B860AC88009F0E0500100000009F4005FF80F000019F26082D2CA6E024FDA78C9F0702FF809A032101285F280205669F090200009F4104000000009F0F05B868BC98005F20084C41425320342F49950508800000009B02E8009F0607A0000000031010500A564953412044454249548407A0000000031010"
@@ -60,12 +78,12 @@ class MainActivity : AppCompatActivity() {
             )
 
         compositeDisposable.add(
-            NewNibssApiWrapper.makePayment(
+            newNibssApiWrapper.makePayment(
                 this,
-                "2033ALZP",
+                userData.terminalId,
                 Gson().toJson(makePaymentParams),
+                "Visa card",
                 "OLOYEDE ADEBAYO",
-                "",
                 makePaymentParams.remark ?: "AAAAA"
             ).subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
@@ -80,5 +98,91 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         compositeDisposable.clear()
+    }
+
+    private fun readCard() {
+        val preferredModes: MutableList<Int> = ArrayList()
+        preferredModes.add(POIEmvCoreManager.DEV_ICC)
+        preferredModes.add(POIEmvCoreManager.DEV_PICC)
+        val cardReader = CardReaderService(this, preferredModes, 45)
+        compositeDisposable.add(
+            cardReader.initiateICCCardPayment(200, 0)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe {
+
+                    if (it is CardReaderEvent.CardDetected) {
+                        val mode: Int = it.mode
+                        var cardReadVia = ""
+                        when (mode) {
+                            POIEmvCoreManager.DEV_ICC -> cardReadVia = "Emv Chip"
+                            POIEmvCoreManager.DEV_PICC -> cardReadVia = "Contactless"
+                            POIEmvCoreManager.DEV_MAG -> cardReadVia = "Magnetic Stripe"
+                        }
+                        Toast.makeText(this, "$cardReadVia Detected Card", Toast.LENGTH_SHORT)
+                            .show()
+                    } else if (it is CardReaderEvent.CardRead) {
+                        cardResult = it.data
+                        Timber.e(cardResult.toString())
+
+                        val card = cardResult.track2Data?.let {
+                            cardResult.applicationPANSequenceNumber?.let { it1 ->
+                                CardData(
+                                    it,
+                                    cardResult.nibssIccSubset,
+                                    it1,
+                                    "051"
+                                )
+                            }
+                        }
+
+                        val makePaymentParams =
+                            card?.let { cardData ->
+                                MakePaymentParams(
+                                    amount = 15,
+                                    terminalId = userData.terminalId,
+                                    cardData = cardData,
+                                    accountType = IsoAccountType.SAVINGS
+                                )
+                            }
+                        cardResult.cardScheme?.let { it1 ->
+                            cardResult.cardHolderName?.let { it2 ->
+                                newNibssApiWrapper.makePayment(
+                                    this,
+                                    userData.terminalId,
+                                    Gson().toJson(makePaymentParams),
+                                    it1,
+                                    it2,
+                                    "TestingAgain"
+                                ).subscribeOn(Schedulers.io())
+                                    .onErrorResumeNext {
+                                        Single.just(null)
+                                    }
+                                    .doOnError {
+                                        Log.d("ERROR_THAT_H", it.localizedMessage)
+                                    }
+                                    .observeOn(AndroidSchedulers.mainThread())
+                                    .subscribe(
+                                        { transactionWithRemark ->
+                                            Toast.makeText(
+                                                this,
+                                                transactionWithRemark.toString(),
+                                                Toast.LENGTH_LONG
+                                            ).show()
+                                            Timber.d("DATA==>${Gson().toJson(transactionWithRemark)}")
+                                        },
+                                        { throwable ->
+                                            Timber.d("ERROR==>${throwable.localizedMessage}")
+                                        }
+                                    )
+                            }?.let { it3 ->
+                                compositeDisposable.add(
+                                    it3
+                                )
+                            }
+                        }
+                    }
+                }
+        )
     }
 }

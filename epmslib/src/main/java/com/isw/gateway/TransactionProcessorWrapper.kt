@@ -113,7 +113,7 @@ class TransactionProcessorWrapper @JvmOverloads constructor(
                 originalTransmissionDate = sdf.format(Date(transactionTime))
                 stan = transactionRequestData!!.STAN ?: timeMgr.time
                 rrn = transactionRequestData!!.RRN ?: timeMgr.fullDate.substring(2, 14)
-                fromAccount = "default"
+                fromAccount = transactionRequestData?.accountType?.name ?: "default"
                 toAccount = ""
                 minorAmount = amount.minus(1075).toString()
                 receivingInstitutionId =

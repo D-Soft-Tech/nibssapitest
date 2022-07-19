@@ -37,6 +37,9 @@ fun TransactionResponse.toNibssResponse(remark: String? = null): NibssResponse =
     }
 
 object Singletons {
+    @JvmStatic
+    fun getGsonInstance() = Gson()
+
     fun setPartnerThreshold(partnerThresh: Int) {
         Prefs.putInt(PREF_PARTNER_THRESHOLD, partnerThresh)
     }
