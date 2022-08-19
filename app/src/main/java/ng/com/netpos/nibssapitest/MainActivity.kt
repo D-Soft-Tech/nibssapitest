@@ -6,14 +6,19 @@ import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.danbamitale.epmslib.entities.CardData
+import com.danbamitale.epmslib.entities.TransactionType
+import com.danbamitale.epmslib.entities.clearPinKey
 import com.google.gson.Gson
+import com.netpluspay.netpossdk.NetPosSdk
 import com.netpluspay.netpossdk.emv.CardReadResult
 import com.netpluspay.netpossdk.emv.CardReaderEvent
 import com.netpluspay.netpossdk.emv.CardReaderService
+import com.netpluspay.netpossdk.utils.DeviceConfig
 import com.netpluspay.nibssclient.models.IsoAccountType
 import com.netpluspay.nibssclient.models.MakePaymentParams
 import com.netpluspay.nibssclient.models.UserData
 import com.netpluspay.nibssclient.service.NewNibssApiWrapper
+import com.pixplicity.easyprefs.library.Prefs
 import com.pos.sdk.emvcore.POIEmvCoreManager
 import io.reactivex.Single
 import io.reactivex.android.schedulers.AndroidSchedulers
@@ -32,15 +37,38 @@ class MainActivity : AppCompatActivity() {
         userData = UserData(
             "Netplus",
             "DigiAsteriks",
-//            "5de231d9-1be0-4c31-8658-6e15892f2b83",
-            "9E89FFBD-9968-4F69-96DB-4E1250F14D55",
-            "2033ALWT",
-            "1142016190000925", // "1142016190000471",
+            "5de231d9-1be0-4c31-8658-6e15892f2b83",
+            "2033ALZP",
+            NetPosSdk.getDeviceSerial(), // "1142016190000471",
             "Marwa",
             "Doyin"
         )
         newNibssApiWrapper.logUser(this, Gson().toJson(userData))
-        newNibssApiWrapper.init(this, false, Gson().toJson(userData))
+        compositeDisposable.add(
+            newNibssApiWrapper.init(this, false, Gson().toJson(userData))
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe { t1, t2 ->
+                    t1?.let {
+                        val keyHolder = it.first
+                        val pinKey = keyHolder?.clearPinKey
+                        Timber.d("DATA_CLEAR_PIN_KEY%s", "$pinKey")
+                        Timber.d("GOTTEN_KEYHOLDER%s", Gson().toJson(it.first))
+                        Timber.d("GOTTEN_CONFIG_DATA%s", Gson().toJson(it.second))
+
+                        val savedKeyHolder =
+                            Prefs.getString("pref_keyholder", "KeyHolderWasn'tSaved")
+                        val savedConfigData =
+                            Prefs.getString("pref_config_data", "KeyHolderWasn'tSaved")
+
+                        Timber.d("SAVED_KEYHOLDER%s", savedKeyHolder)
+                        Timber.d("SAVED_CONFIG_DATA%s", savedConfigData)
+                    }
+                    t2?.let {
+                        Timber.d("GOTTEN_ERROR%s", it.localizedMessage)
+                    }
+                }
+        )
     }
 
     fun makePayment(v: View) {
@@ -71,8 +99,11 @@ class MainActivity : AppCompatActivity() {
         Timber.e(card.toString())
         val makePaymentParams =
             MakePaymentParams(
-                amount = 200,
                 terminalId = "2033ALZP",
+                amount = 200,
+                otherAmount = 0,
+                transactionType = TransactionType.PURCHASE,
+                accountType = IsoAccountType.CURRENT,
                 cardData = card,
                 remark = "Testing_from_bayo"
             )
@@ -100,6 +131,15 @@ class MainActivity : AppCompatActivity() {
         compositeDisposable.clear()
     }
 
+    override fun onResume() {
+        super.onResume()
+        val savedKeyHolder = Prefs.getString("pref_keyholder", "KeyHolderWasn'tSaved")
+        val savedConfigData = Prefs.getString("pref_config_data", "ConfigDataWasn'tSaved")
+
+        Timber.d("SAVED_KEYHOLDER_ON_RESUME%s", savedKeyHolder)
+        Timber.d("SAVED_CONFIG_DATA_ON_RESUME%s", savedConfigData)
+    }
+
     private fun readCard() {
         val preferredModes: MutableList<Int> = ArrayList()
         preferredModes.add(POIEmvCoreManager.DEV_ICC)
@@ -110,7 +150,6 @@ class MainActivity : AppCompatActivity() {
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe {
-
                     if (it is CardReaderEvent.CardDetected) {
                         val mode: Int = it.mode
                         var cardReadVia = ""
@@ -122,6 +161,7 @@ class MainActivity : AppCompatActivity() {
                         Toast.makeText(this, "$cardReadVia Detected Card", Toast.LENGTH_SHORT)
                             .show()
                     } else if (it is CardReaderEvent.CardRead) {
+                        Timber.d("CARD_DATA%s", Gson().toJson(it.data))
                         cardResult = it.data
                         Timber.e(cardResult.toString())
 
@@ -139,10 +179,10 @@ class MainActivity : AppCompatActivity() {
                         val makePaymentParams =
                             card?.let { cardData ->
                                 MakePaymentParams(
-                                    amount = 15,
+                                    amount = 3,
                                     terminalId = userData.terminalId,
                                     cardData = cardData,
-                                    accountType = IsoAccountType.SAVINGS
+                                    accountType = IsoAccountType.CURRENT
                                 )
                             }
                         cardResult.cardScheme?.let { it1 ->

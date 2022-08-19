@@ -93,8 +93,6 @@ object NewNibssApiWrapper {
             return
         }
         SharedPrefManager.setUserData(userData)
-        getIswToken(context)
-        getThreshold()
     }
 
     private fun setTerminalId() {
@@ -113,9 +111,8 @@ object NewNibssApiWrapper {
         context: Context,
         configureSilently: Boolean = false,
         serializedUserData: String
-    ) {
+    ): Single<Pair<KeyHolder?, ConfigData?>> {
         user = Singletons.getCurrentlyLoggedInUser()
-        transactionResponseDao = AppDatabase.getDatabaseInstance(context).transactionResponseDao()
         logUser(context, serializedUserData)
         setCurrentlyLoggedInUser()
         setTerminalId()
@@ -129,8 +126,9 @@ object NewNibssApiWrapper {
         Timber.d("KEY_HOLDER$keyHolder")
         configData = Singletons.getConfigData()
         val localBroadcastManager = LocalBroadcastManager.getInstance(context)
-        if (isConfigurationInProcess)
-            return
+//        if (isConfigurationInProcess) {
+//            return Single.just(Pair(keyHolder, configData))
+//        }
         configurationStatus = 0
         sendIntent.putExtra(CONFIGURATION_STATUS, configurationStatus)
         localBroadcastManager.sendBroadcast(sendIntent)
@@ -150,36 +148,39 @@ object NewNibssApiWrapper {
             }
             else -> configureTerminal(context)
         }
+        return req
 
-        val disposable = req.subscribeOn(Schedulers.io())
-            .observeOn(AndroidSchedulers.mainThread())
-            .doOnSubscribe {
-                isConfigurationInProcess = true
-            }
-            .doFinally { isConfigurationInProcess = false }
-            .subscribe { pair, error ->
-                error?.let {
-                    // TerminalManager.getInstance().beep(context, TerminalManager.BEEP_MODE_FAILURE)
-                    configurationStatus = -1
-                    sendIntent.putExtra(CONFIGURATION_STATUS, configurationStatus)
-                    localBroadcastManager.sendBroadcast(sendIntent)
-                    Timber.e(it)
-                }
-                pair?.let {
-                    pair.first?.let {
-                        Prefs.putLong(LAST_POS_CONFIGURATION_TIME, System.currentTimeMillis())
-                        Prefs.putString(PREF_CONFIG_DATA, gson.toJson(pair.second))
-                        Prefs.putString(PREF_KEYHOLDER, gson.toJson(pair.first))
-                        this.configData = pair.second
-                    }
-                    configurationStatus = 1
-                    sendIntent.putExtra(CONFIGURATION_STATUS, configurationStatus)
-                    localBroadcastManager.sendBroadcast(sendIntent)
-                    Timber.e("Config data set")
-                    disposeDisposables()
-                }
-            }
-        disposables.add(disposable)
+//        val disposable = req.subscribeOn(Schedulers.io())
+//            .observeOn(AndroidSchedulers.mainThread())
+//            .doOnSubscribe {
+//                isConfigurationInProcess = true
+//            }
+//            .doFinally { isConfigurationInProcess = false }
+//            .subscribe { pair, error ->
+//                error?.let {
+//                    // TerminalManager.getInstance().beep(context, TerminalManager.BEEP_MODE_FAILURE)
+//                    configurationStatus = -1
+//                    sendIntent.putExtra(CONFIGURATION_STATUS, configurationStatus)
+//                    localBroadcastManager.sendBroadcast(sendIntent)
+//                    Timber.e(it)
+//                }
+//                pair?.let { data ->
+//                    data.first?.let {
+//                        Prefs.putLong(LAST_POS_CONFIGURATION_TIME, System.currentTimeMillis())
+//                        Prefs.putString(PREF_CONFIG_DATA, gson.toJson(data.second))
+//                        Prefs.putString(PREF_KEYHOLDER, gson.toJson(data.first))
+//                        this.configData = data.second
+//                        this.keyHolder = data.first
+//                    }
+//                    configurationStatus = 1
+//                    sendIntent.putExtra(CONFIGURATION_STATUS, configurationStatus)
+//                    localBroadcastManager.sendBroadcast(sendIntent)
+//                    Timber.e("Config data set")
+// //                    disposeDisposables()
+//                }
+//            }
+//        disposables.add(disposable)
+//        return Single.just(Pair(this.keyHolder, this.configData))
     }
 
     fun callHome(context: Context): Single<Pair<KeyHolder?, ConfigData?>> {
@@ -191,27 +192,45 @@ object NewNibssApiWrapper {
             currentlyLoggedInUser!!.terminalSerialNumber
         ).flatMap {
             Timber.e("call home result $it")
-            if (it == "00")
+            if (it == "00") {
                 return@flatMap Single.just(Pair(null, null))
-            else Single.error(Exception("call home failed"))
+            } else Single.error(Exception("call home failed"))
         }
     }
 
-    fun configureTerminal(context: Context): Single<Pair<KeyHolder?, ConfigData?>> =
-        terminalConfigurator.downloadNibssKeys(context, getTerminalId())
+    private fun configureTerminal(context: Context): Single<Pair<KeyHolder?, ConfigData?>> {
+        val localBroadcastManager = LocalBroadcastManager.getInstance(context)
+
+        return terminalConfigurator.downloadNibssKeys(context, getTerminalId())
             .flatMap { nibssKeyHolder ->
-                keyHolder = nibssKeyHolder
-                terminalConfigurator.downloadTerminalParameters(
-                    context,
-                    getTerminalId(),
-                    nibssKeyHolder.clearSessionKey,
-                    currentlyLoggedInUser!!.terminalSerialNumber
-                ).map { nibssConfigData ->
-                    setConfigData(nibssConfigData)
-                    configData = nibssConfigData
-                    return@map Pair(nibssKeyHolder, nibssConfigData)
+                var resp: Single<Pair<KeyHolder?, ConfigData?>> = Single.just(Pair(null, null))
+                if (nibssKeyHolder.isValid) {
+                    keyHolder = nibssKeyHolder
+                    Prefs.putLong(LAST_POS_CONFIGURATION_TIME, System.currentTimeMillis())
+                    Prefs.putString(PREF_KEYHOLDER, gson.toJson(nibssKeyHolder))
+                    return@flatMap terminalConfigurator.downloadTerminalParameters(
+                        context,
+                        getTerminalId(),
+                        nibssKeyHolder.clearSessionKey,
+                        currentlyLoggedInUser!!.terminalSerialNumber
+                    ).map { nibssConfigData ->
+                        setConfigData(nibssConfigData)
+                        configData = nibssConfigData
+                        Prefs.putString(PREF_CONFIG_DATA, gson.toJson(nibssConfigData))
+                        configurationStatus = 1
+                        sendIntent.putExtra(CONFIGURATION_STATUS, configurationStatus)
+                        localBroadcastManager.sendBroadcast(sendIntent)
+                        Timber.e("Config data set")
+                        return@map Pair(nibssKeyHolder, nibssConfigData)
+                    }
+                } else {
+                    configurationStatus = -1
+                    sendIntent.putExtra(CONFIGURATION_STATUS, configurationStatus)
+                    localBroadcastManager.sendBroadcast(sendIntent)
+                    Single.just(Pair(null, null))
                 }
             }
+    }
 
     private fun disposeDisposables() {
         disposables.clear()
@@ -225,6 +244,9 @@ object NewNibssApiWrapper {
         cardHolder: String,
         remark: String
     ): Single<TransactionWithRemark?> {
+//        getIswToken(context)
+//        getThreshold()
+        transactionResponseDao = AppDatabase.getDatabaseInstance(context).transactionResponseDao()
         val params = gson.fromJson(makePaymentParams, MakePaymentParams::class.java)
         validateField(params.amount)
 
@@ -236,39 +258,39 @@ object NewNibssApiWrapper {
                 GetPartnerInterSwitchThresholdResponse::class.java
             )?.interSwitchThreshold ?: 0
 
-        return if (thresHold == 0) {
-            makePaymentViaNibss(
-                context,
-                null,
-                terminalId,
-                makePaymentParams,
-                cardScheme,
-                cardHolder,
-                remark
-            )
-        } else {
-            if (params.amount.toDouble() < 15 /*thresHold.toDouble()*/) {
-                makePaymentViaNibss(
-                    context,
-                    null,
-                    terminalId,
-                    makePaymentParams,
-                    cardScheme,
-                    cardHolder,
-                    remark
-                )
-            } else {
-                processTransactionViaInterSwitchMakePayment(
-                    context,
-                    null,
-                    terminalId,
-                    makePaymentParams,
-                    cardScheme,
-                    cardHolder,
-                    remark
-                )
-            }
-        }
+//        return if (thresHold == 0) {
+        return makePaymentViaNibss(
+            context,
+            null,
+            terminalId,
+            makePaymentParams,
+            cardScheme,
+            cardHolder,
+            remark
+        )
+//        } else {
+//            if (params.amount.toDouble() < 15 /*thresHold.toDouble()*/) {
+//                makePaymentViaNibss(
+//                    context,
+//                    null,
+//                    terminalId,
+//                    makePaymentParams,
+//                    cardScheme,
+//                    cardHolder,
+//                    remark
+//                )
+//            } else {
+//                processTransactionViaInterSwitchMakePayment(
+//                    context,
+//                    null,
+//                    terminalId,
+//                    makePaymentParams,
+//                    cardScheme,
+//                    cardHolder,
+//                    remark
+//                )
+//            }
+//        }
     }
 
     private fun makePaymentViaNibss(
@@ -486,6 +508,9 @@ object NewNibssApiWrapper {
         }
 
         val keyHolder = getKeyHolder()
+
+        getIswToken(context)
+        getThreshold()
 
         // IsoAccountType.
         this.amountLong = amountDbl.toLong()

@@ -1,0 +1,89 @@
+2022-08-08 09:37:05.027 14592-14592/me.tap.contactlesspay W/ActivityThread: handleWindowVisibility: no activity for token android.os.BinderProxy@a549a1e
+2022-08-08 09:37:05.655 14592-14592/me.tap.contactlesspay D/ViewRootImpl[MainActivity]: hardware acceleration = true , fakeHwAccelerated = false, sRendererDisabled = false, forceHwAccelerated = false, sSystemRendererDisabled = false
+2022-08-08 09:37:05.663 14592-14592/me.tap.contactlesspay I/InputTransport: Create ARC handle: 0x7b1cf945a0
+2022-08-08 09:37:05.703 14592-14592/me.tap.contactlesspay E/NewNibssApiWrapper: Terminal ID: 2033ALZP
+2022-08-08 09:37:05.704 14592-14592/me.tap.contactlesspay D/NewNibssApiWrapper: KEY_HOLDERnull
+2022-08-08 09:37:05.706 14592-14592/me.tap.contactlesspay E/NewNibssApiWrapper: last configuration time was not today, configure terminal now
+2022-08-08 09:37:05.724 14592-14753/me.tap.contactlesspay I/System.out: Header bytes: 003c
+2022-08-08 09:37:05.725 14592-14821/me.tap.contactlesspay I/System.out: Header bytes: 003c
+2022-08-08 09:37:05.726 14592-14753/me.tap.contactlesspay I/System.out: Request: ��<080022380000008000009A0000080809370509370509370508082033ALZP
+2022-08-08 09:37:05.726 14592-14753/me.tap.contactlesspay I/System.out:  Hex: 003c3038303032323338303030303030383030303030394130303030303830383039333730353039333730353039333730353038303832303333414c5a50
+2022-08-08 09:37:05.727 14592-14821/me.tap.contactlesspay I/System.out: Request: ��<080022380000008000009A0000080809370509370509370508082033ALZP
+2022-08-08 09:37:05.727 14592-14821/me.tap.contactlesspay I/System.out:  Hex: 003c3038303032323338303030303030383030303030394130303030303830383039333730353039333730353039333730353038303832303333414c5a50
+2022-08-08 09:37:05.735 14592-14821/me.tap.contactlesspay I/System.out: [socket]:check permission begin!
+2022-08-08 09:37:05.736 14592-14753/me.tap.contactlesspay I/System.out: [socket]:check permission begin!
+2022-08-08 09:37:05.737 14592-14592/me.tap.contactlesspay V/PhoneWindow: DecorView setVisiblity: visibility = 4, Parent = null, this = DecorView@6f0c031[]
+2022-08-08 09:37:05.743 14592-14592/me.tap.contactlesspay D/ViewRootImpl[MainActivity]: hardware acceleration = true , fakeHwAccelerated = false, sRendererDisabled = false, forceHwAccelerated = false, sSystemRendererDisabled = false
+2022-08-08 09:37:05.753 14592-14592/me.tap.contactlesspay I/InputTransport: Create ARC handle: 0x7b1cf94a80
+2022-08-08 09:37:05.754 14592-14592/me.tap.contactlesspay V/PhoneWindow: DecorView setVisiblity: visibility = 0, Parent = android.view.ViewRootImpl@44d0684, this = DecorView@6f0c031[MainActivity]
+2022-08-08 09:37:05.796 14592-14743/me.tap.contactlesspay D/Surface: Surface::connect(this=0x7b1d106000,api=1)
+2022-08-08 09:37:05.801 14592-14743/me.tap.contactlesspay D/Surface: Surface::setBufferCount(this=0x7b1d106000,bufferCount=3)
+2022-08-08 09:37:05.802 14592-14743/me.tap.contactlesspay D/Surface: Surface::allocateBuffers(this=0x7b1d106000)
+2022-08-08 09:37:05.912 14592-14743/me.tap.contactlesspay D/Surface: Surface::connect(this=0x7b1ccaa000,api=1)
+2022-08-08 09:37:05.915 14592-14743/me.tap.contactlesspay D/Surface: Surface::setBufferCount(this=0x7b1ccaa000,bufferCount=3)
+2022-08-08 09:37:05.915 14592-14743/me.tap.contactlesspay D/Surface: Surface::allocateBuffers(this=0x7b1ccaa000)
+2022-08-08 09:37:06.253 14592-14821/me.tap.contactlesspay D/OutData: ��<080022380000008000009A0000080809370509370509370508082033ALZP Length: 62
+2022-08-08 09:37:06.815 14592-14753/me.tap.contactlesspay D/OutData: ��<080022380000008000009A0000080809370509370509370508082033ALZP Length: 62
+2022-08-08 09:37:07.623 14592-14821/me.tap.contactlesspay I/System.out: Header bytes: 003c
+2022-08-08 09:37:07.625 14592-14821/me.tap.contactlesspay I/System.out: Request: ��<080022380000008000009B0000080809370709370709370708082033ALZP
+2022-08-08 09:37:07.625 14592-14821/me.tap.contactlesspay I/System.out:  Hex: 003c3038303032323338303030303030383030303030394230303030303830383039333730373039333730373039333730373038303832303333414c5a50
+2022-08-08 09:37:07.633 14592-14821/me.tap.contactlesspay I/System.out: [socket]:check permission begin!
+2022-08-08 09:37:07.689 14592-14605/me.tap.contactlesspay I/.contactlesspa: Background concurrent copying GC freed 23183(957KB) AllocSpace objects, 22(440KB) LOS objects, 49% free, 3980KB/7960KB, paused 148us total 169.503ms
+2022-08-08 09:37:08.009 14592-14821/me.tap.contactlesspay D/OutData: ��<080022380000008000009B0000080809370709370709370708082033ALZP Length: 62
+2022-08-08 09:37:08.026 14592-14753/me.tap.contactlesspay I/System.out: Header bytes: 003c
+2022-08-08 09:37:08.027 14592-14753/me.tap.contactlesspay I/System.out: Request: ��<080022380000008000009B0000080809370809370809370808082033ALZP
+2022-08-08 09:37:08.027 14592-14753/me.tap.contactlesspay I/System.out:  Hex: 003c3038303032323338303030303030383030303030394230303030303830383039333730383039333730383039333730383038303832303333414c5a50
+2022-08-08 09:37:08.033 14592-14753/me.tap.contactlesspay I/System.out: [socket]:check permission begin!
+2022-08-08 09:37:08.605 14592-14753/me.tap.contactlesspay D/OutData: ��<080022380000008000009B0000080809370809370809370808082033ALZP Length: 62
+2022-08-08 09:37:09.489 14592-14821/me.tap.contactlesspay I/System.out: Header bytes: 003c
+2022-08-08 09:37:09.492 14592-14821/me.tap.contactlesspay I/System.out: Request: ��<080022380000008000009G0000080809370909370909370908082033ALZP
+2022-08-08 09:37:09.492 14592-14821/me.tap.contactlesspay I/System.out:  Hex: 003c3038303032323338303030303030383030303030394730303030303830383039333730393039333730393039333730393038303832303333414c5a50
+2022-08-08 09:37:09.498 14592-14821/me.tap.contactlesspay I/System.out: [socket]:check permission begin!
+2022-08-08 09:37:09.839 14592-14753/me.tap.contactlesspay I/System.out: Header bytes: 003c
+2022-08-08 09:37:09.841 14592-14753/me.tap.contactlesspay I/System.out: Request: ��<080022380000008000009G0000080809370909370909370908082033ALZP
+2022-08-08 09:37:09.841 14592-14753/me.tap.contactlesspay I/System.out:  Hex: 003c3038303032323338303030303030383030303030394730303030303830383039333730393039333730393039333730393038303832303333414c5a50
+2022-08-08 09:37:09.847 14592-14753/me.tap.contactlesspay I/System.out: [socket]:check permission begin!
+2022-08-08 09:37:10.191 14592-14821/me.tap.contactlesspay D/OutData: ��<080022380000008000009G0000080809370909370909370908082033ALZP Length: 62
+2022-08-08 09:37:10.550 14592-14753/me.tap.contactlesspay D/OutData: ��<080022380000008000009G0000080809370909370909370908082033ALZP Length: 62
+2022-08-08 09:37:11.539 14592-14821/me.tap.contactlesspay I/System.out: initialized keyholder
+2022-08-08 09:37:11.552 14592-14605/me.tap.contactlesspay I/.contactlesspa: Background young concurrent copying GC freed 69294(2822KB) AllocSpace objects, 6(120KB) LOS objects, 39% free, 4826KB/7960KB, paused 356us total 123.995ms
+2022-08-08 09:37:11.592 14592-14754/me.tap.contactlesspay I/System.out: Header bytes: 0094
+2022-08-08 09:37:11.603 14592-14754/me.tap.contactlesspay I/System.out: Request: ���080022380000008000059C0000080809371109371109371108082033ALZP021010161142016190000471560324826823A8D335AC23B8B09A62526D97FF764872F7A11A5D64BE26A3B5C8
+2022-08-08 09:37:11.603 14592-14754/me.tap.contactlesspay I/System.out:  Hex: 00943038303032323338303030303030383030303035394330303030303830383039333731313039333731313039333731313038303832303333414c5a5030323130313031363131343230313631393030303034373135363033323438323638323341384433333541433233423842303941363235323644393746463736343837324637413131413544363442453236413342354338
+2022-08-08 09:37:11.609 14592-14754/me.tap.contactlesspay I/System.out: [socket]:check permission begin!
+2022-08-08 09:37:11.775 14592-14753/me.tap.contactlesspay I/System.out: initialized keyholder
+2022-08-08 09:37:11.803 14592-14765/me.tap.contactlesspay I/System.out: Header bytes: 0094
+2022-08-08 09:37:11.805 14592-14765/me.tap.contactlesspay I/System.out: Request: ���080022380000008000059C0000080809371109371109371108082033ALZP02101016114201619000047187C4C955E746107D55A3515BD64190C5A9C95B30CE41B6BCE0EC120356076CF7
+2022-08-08 09:37:11.805 14592-14765/me.tap.contactlesspay I/System.out:  Hex: 00943038303032323338303030303030383030303035394330303030303830383039333731313039333731313039333731313038303832303333414c5a5030323130313031363131343230313631393030303034373138374334433935354537343631303744353541333531354244363431393043354139433935423330434534314236424345304543313230333536303736434637
+2022-08-08 09:37:11.809 14592-14765/me.tap.contactlesspay I/System.out: [socket]:check permission begin!
+2022-08-08 09:37:12.598 14592-14754/me.tap.contactlesspay D/OutData: ���080022380000008000059C0000080809371109371109371108082033ALZP021010161142016190000471560324826823A8D335AC23B8B09A62526D97FF764872F7A11A5D64BE26A3B5C8 Length: 150
+2022-08-08 09:37:12.681 14592-14592/me.tap.contactlesspay E/NewNibssApiWrapper: java.lang.StringIndexOutOfBoundsException: length=0; index=-1
+        at java.lang.String.substring(String.java:2023)
+        at com.danbamitale.epmslib.utils.IsoAdapter.processISOBitStreamWithJ8583(IsoAdapter.kt:20)
+        at com.danbamitale.epmslib.processors.TerminalConfigurator.sendNetworkManagementRequest$lambda-2(TerminalConfigurator.kt:176)
+        at com.danbamitale.epmslib.processors.TerminalConfigurator.$r8$lambda$vJBQhPMNnO4aJfiyCY2Ai3W452Y(Unknown Source:0)
+        at com.danbamitale.epmslib.processors.TerminalConfigurator$$ExternalSyntheticLambda5.call(Unknown Source:14)
+        at io.reactivex.internal.operators.single.SingleFromCallable.subscribeActual(SingleFromCallable.java:44)
+        at io.reactivex.Single.subscribe(Single.java:3603)
+        at io.reactivex.internal.operators.single.SingleSubscribeOn$SubscribeOnObserver.run(SingleSubscribeOn.java:89)
+        at io.reactivex.internal.schedulers.ScheduledDirectTask.call(ScheduledDirectTask.java:38)
+        at io.reactivex.internal.schedulers.ScheduledDirectTask.call(ScheduledDirectTask.java:26)
+        at java.util.concurrent.FutureTask.run(FutureTask.java:266)
+        at java.util.concurrent.ScheduledThreadPoolExecutor$ScheduledFutureTask.run(ScheduledThreadPoolExecutor.java:301)
+        at java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1167)
+        at java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:641)
+        at java.lang.Thread.run(Thread.java:919)
+2022-08-08 09:37:14.318 14592-14765/me.tap.contactlesspay D/OutData: ���080022380000008000059C0000080809371109371109371108082033ALZP02101016114201619000047187C4C955E746107D55A3515BD64190C5A9C95B30CE41B6BCE0EC120356076CF7 Length: 150
+2022-08-08 09:37:15.800 14592-14743/me.tap.contactlesspay D/Surface: Surface::disconnect(this=0x7b1d106000,api=1)
+2022-08-08 09:37:15.804 14592-14592/me.tap.contactlesspay D/View: [Warning] assignParent to null: this = DecorView@bafbd50[MainActivity]
+2022-08-08 09:37:15.805 14592-14592/me.tap.contactlesspay I/InputTransport: Destroy ARC handle: 0x7b1cf945a0
+2022-08-08 09:37:15.821 14592-14592/me.tap.contactlesspay D/MainActivity$configureTerminal: Data : (KeyHolder(masterKey=8747E5079D0D79114AA56951B5FF1FF3, sessionKey=A6BA0C859DC2A13F0BC6929877D6548D, pinKey=9CBE5CE8562DF41C0EA65369147477D0, track2Key=, bdk=), ConfigData(epmsDateTime=20220808093621, cardAcceptorIdCode=2033LAGPOOO7885, hostTimeOut=45, currencyCode=566, countryCode=566, callHomeTime=, merchantNameLocation=VFD MICROFINANCE BANK LLA           LANG, merchantCategoryCode=5300))
+2022-08-08 09:37:15.879 14592-14592/me.tap.contactlesspay D/MainActivity$configureTerminal: PinKey : 9CBE5CE8562DF41C0EA65369147477D0
+2022-08-08 09:37:15.970 14592-14592/me.tap.contactlesspay D/ViewRootImpl[Toast]: hardware acceleration = true , fakeHwAccelerated = false, sRendererDisabled = false, forceHwAccelerated = false, sSystemRendererDisabled = false
+2022-08-08 09:37:15.981 14592-14592/me.tap.contactlesspay I/InputTransport: Create ARC handle: 0x7b79fc3a80
+2022-08-08 09:37:16.029 14592-14743/me.tap.contactlesspay D/Surface: Surface::connect(this=0x7b1c7d2000,api=1)
+2022-08-08 09:37:16.034 14592-14743/me.tap.contactlesspay D/Surface: Surface::setBufferCount(this=0x7b1c7d2000,bufferCount=3)
+2022-08-08 09:37:16.034 14592-14743/me.tap.contactlesspay D/Surface: Surface::allocateBuffers(this=0x7b1c7d2000)
+2022-08-08 09:37:17.889 14592-14743/me.tap.contactlesspay D/Surface: Surface::disconnect(this=0x7b1c7d2000,api=1)
+2022-08-08 09:37:17.897 14592-14592/me.tap.contactlesspay D/View: [Warning] assignParent to null: this = android.widget.LinearLayout{37efa81 V.E...... ......ID 0,0-423,67}
+2022-08-08 09:37:17.897 14592-14592/me.tap.contactlesspay I/InputTransport: Destroy ARC handle: 0x7b79fc3a80
