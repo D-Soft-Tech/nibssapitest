@@ -246,6 +246,7 @@ object NewNibssApiWrapper {
     ): Single<TransactionWithRemark?> {
 //        getIswToken(context)
 //        getThreshold()
+        // some comments here
         transactionResponseDao = AppDatabase.getDatabaseInstance(context).transactionResponseDao()
         val params = gson.fromJson(makePaymentParams, MakePaymentParams::class.java)
         validateField(params.amount)
