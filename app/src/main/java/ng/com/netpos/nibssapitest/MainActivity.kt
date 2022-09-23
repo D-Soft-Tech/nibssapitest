@@ -6,6 +6,7 @@ import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.danbamitale.epmslib.entities.CardData
+import com.danbamitale.epmslib.entities.KeyHolder
 import com.danbamitale.epmslib.entities.TransactionType
 import com.danbamitale.epmslib.entities.clearPinKey
 import com.google.gson.Gson
@@ -43,28 +44,35 @@ class MainActivity : AppCompatActivity() {
             "Marwa",
             "Doyin"
         )
+
         newNibssApiWrapper.logUser(this, Gson().toJson(userData))
         compositeDisposable.add(
             newNibssApiWrapper.init(this, false, Gson().toJson(userData))
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe { t1, t2 ->
-                    t1?.let {
-                        val keyHolder = it.first
+                .subscribe { data, error ->
+                    data?.let { response ->
+                        val keyHolder = response.first
                         val pinKey = keyHolder?.clearPinKey
+                        if (pinKey != null) {
+                            NetPosSdk.writeTpkKey(DeviceConfig.TPKIndex, pinKey)
+                        }
                         Timber.d("DATA_CLEAR_PIN_KEY%s", "$pinKey")
-                        Timber.d("GOTTEN_KEYHOLDER%s", Gson().toJson(it.first))
-                        Timber.d("GOTTEN_CONFIG_DATA%s", Gson().toJson(it.second))
+                        Timber.d("GOTTEN_KEYHOLDER%s", Gson().toJson(response.first))
+                        Timber.d("GOTTEN_CONFIG_DATA%s", Gson().toJson(response.second))
 
                         val savedKeyHolder =
                             Prefs.getString("pref_keyholder", "KeyHolderWasn'tSaved")
                         val savedConfigData =
                             Prefs.getString("pref_config_data", "KeyHolderWasn'tSaved")
 
-                        Timber.d("SAVED_KEYHOLDER%s", savedKeyHolder)
+                        val aa = Gson().fromJson(savedKeyHolder, KeyHolder::class.java)
+                        val bb =
+
+                            Timber.d("SAVED_KEYHOLDER%s", savedKeyHolder)
                         Timber.d("SAVED_CONFIG_DATA%s", savedConfigData)
                     }
-                    t2?.let {
+                    error?.let {
                         Timber.d("GOTTEN_ERROR%s", it.localizedMessage)
                     }
                 }
