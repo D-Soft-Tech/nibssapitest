@@ -14,7 +14,6 @@ import java.util.* // ktlint-disable no-wildcard-imports
 object Utility {
 
     fun hex(data: ByteArray): String {
-
         val sb = StringBuilder()
         for (b in data) {
             sb.append(Character.forDigit(b.toInt() and 240 shr 4, 16))
@@ -97,45 +96,44 @@ object Utility {
         cardScheme: String,
         requestData: TransactionRequestData
     ) =
-        this.cardData?.expiryDate?.let {
+        this.cardData.expiryDate.let {
+            val mid = Singletons.getConfigData()?.cardAcceptorIdCode ?: ""
             SharedPrefManager.getUserData().customerName.let { it1 ->
-                SharedPrefManager.getUserData().partnerId.let { it2 ->
-                    TransactionToLogBeforeConnectingToNibbs(
-                        status = "PENDING",
-                        TransactionWithRemark(
-                            AID = "",
-                            rrn = getCustomRrn(),
-                            STAN = generateRandomRrn(6),
-                            TSI = "",
-                            TVR = "",
-                            accountType = accountType.name,
-                            acquiringInstCode = "",
-                            additionalAmount_54 = "",
-                            amount = amount.toInt(),
-                            appCryptogram = "",
-                            authCode = "",
-                            cardExpiry = it,
-                            cardHolder = it1,
-                            cardLabel = cardScheme.toString(),
-                            id = 0,
-                            localDate_13 = RandomNumUtil.getDate(),
-                            localTime_12 = formattedTime.replace(":", ""),
-                            maskedPan = cardData!!.pan,
-                            merchantId = it2,
-                            originalForwardingInstCode = "",
-                            otherAmount = requestData.otherAmount.toInt(),
-                            otherId = "",
-                            responseCode = "99",
-                            responseDE55 = "",
-                            terminalId = SharedPrefManager.getUserData().terminalId,
-                            transactionTimeInMillis = 0,
-                            transactionType = requestData.transactionType.name,
-                            transmissionDateTime = getCurrentDateTime(),
-                            remark = remark ?: "",
-                            responseMessage = ""
-                        )
+                TransactionToLogBeforeConnectingToNibbs(
+                    status = "PENDING",
+                    TransactionWithRemark(
+                        AID = "",
+                        rrn = getCustomRrn(),
+                        STAN = generateRandomRrn(6),
+                        TSI = "",
+                        TVR = "",
+                        accountType = accountType.name,
+                        acquiringInstCode = "",
+                        additionalAmount_54 = "",
+                        amount = amount.toInt(),
+                        appCryptogram = "",
+                        authCode = "",
+                        cardExpiry = it,
+                        cardHolder = it1,
+                        cardLabel = cardScheme.toString(),
+                        id = 0,
+                        localDate_13 = RandomNumUtil.getDate(),
+                        localTime_12 = formattedTime.replace(":", ""),
+                        maskedPan = cardData!!.pan,
+                        merchantId = mid,
+                        originalForwardingInstCode = "",
+                        otherAmount = requestData.otherAmount.toInt(),
+                        otherId = "",
+                        responseCode = "99",
+                        responseDE55 = "",
+                        terminalId = SharedPrefManager.getUserData().terminalId,
+                        transactionTimeInMillis = 0,
+                        transactionType = requestData.transactionType.name,
+                        transmissionDateTime = getCurrentDateTime(),
+                        remark = remark ?: "",
+                        responseMessage = ""
                     )
-                }
+                )
             }
         }
 }

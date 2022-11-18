@@ -187,7 +187,7 @@ class MainActivity : AppCompatActivity() {
                         val makePaymentParams =
                             card?.let { cardData ->
                                 MakePaymentParams(
-                                    amount = 3,
+                                    amount = 327,
                                     terminalId = userData.terminalId,
                                     cardData = cardData,
                                     accountType = IsoAccountType.CURRENT

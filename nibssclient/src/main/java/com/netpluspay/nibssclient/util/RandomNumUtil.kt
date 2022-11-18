@@ -32,7 +32,7 @@ object RandomNumUtil {
         return dateFormatter.format(today)
     }
 
-    fun KeyHolder.mapNetPlusPayKeyHolderToDanBamiTaleKeyHolder(): com.danbamitale.epmslib.entities.KeyHolder {
+    fun KeyHolder.mapNetPlusPayKeyHolderToDanBamitaleKeyHolder(): com.danbamitale.epmslib.entities.KeyHolder {
         return com.danbamitale.epmslib.entities.KeyHolder(
             masterKey,
             sessionKey,
@@ -44,7 +44,7 @@ object RandomNumUtil {
 
     @SuppressLint("SimpleDateFormat")
     fun getCurrentDateTime(): String {
-        val dateFormatter: DateFormat = SimpleDateFormat("yyyy-MM-dd hh:mm:ss")
+        val dateFormatter: DateFormat = SimpleDateFormat("yyyy-MM-dd hh:mm:ss a")
         val today = Date()
         return dateFormatter.format(today)
     }

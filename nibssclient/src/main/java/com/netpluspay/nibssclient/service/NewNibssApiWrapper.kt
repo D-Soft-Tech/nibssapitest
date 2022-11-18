@@ -100,7 +100,7 @@ object NewNibssApiWrapper {
     }
 
     private fun validateField(amount: Long) {
-        amountDbl = amount.toDouble() * 100
+        amountDbl = amount.toDouble()
         this.amountLong = amountDbl.toLong()
     }
 
