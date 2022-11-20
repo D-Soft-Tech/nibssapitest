@@ -190,13 +190,13 @@ class TransactionProcessor(private val hostConfig: HostConfig) {
         requestData: TransactionRequestData,
         cardData: CardData
     ): Single<TransactionResponse> = Single.fromCallable {
-
         requestIsoMessage = setBaseFields(requestData, cardData, hostConfig.configData)
         when (requestData.transactionType) {
             TransactionType.PURCHASE_WITH_CASH_BACK -> {
                 val additionalAmounts = String.format(
                     "%s05%sD%012d",
-                    requestData.accountType.code, hostConfig.configData.currencyCode,
+                    requestData.accountType.code,
+                    hostConfig.configData.currencyCode,
                     requestData.otherAmount
                 )
                 requestIsoMessage.setField(
@@ -210,7 +210,8 @@ class TransactionProcessor(private val hostConfig: HostConfig) {
                     Constants.SYSTEMS_TRACE_AUDIT_NUMBER_11,
                     IsoValue<String>(
                         IsoType.ALPHA,
-                        requestData.originalDataElements!!.originalSTAN, 6
+                        requestData.originalDataElements!!.originalSTAN,
+                        6
                     )
                 )
 
@@ -218,7 +219,8 @@ class TransactionProcessor(private val hostConfig: HostConfig) {
                     Constants.TIME_LOCAL_TRANSACTION_12,
                     IsoValue<String>(
                         IsoType.ALPHA,
-                        requestData.originalDataElements.originalTransmissionTime.substring(4), 6
+                        requestData.originalDataElements.originalTransmissionTime.substring(4),
+                        6
                     )
                 )
 
@@ -226,7 +228,8 @@ class TransactionProcessor(private val hostConfig: HostConfig) {
                     Constants.DATE_LOCAL_TRANSACTION_13,
                     IsoValue<String>(
                         IsoType.ALPHA,
-                        requestData.originalDataElements.originalTransmissionTime.substring(0, 4), 4
+                        requestData.originalDataElements.originalTransmissionTime.substring(0, 4),
+                        4
                     )
                 )
 
@@ -293,6 +296,7 @@ class TransactionProcessor(private val hostConfig: HostConfig) {
                     requestIsoMessage.setField(95, IsoValue(IsoType.ALPHA, replacementAmounts, 42))
                 }
             }
+            else -> {}
         }
         IsoAdapter.logIsoMessage(requestIsoMessage)
 
