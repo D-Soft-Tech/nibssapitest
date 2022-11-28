@@ -7,6 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.danbamitale.epmslib.entities.TransactionResponse
 import com.netpluspay.nibssclient.dao.TransactionResponseDao
+import com.netpluspay.nibssclient.dao.TransactionTrackingTableDao
 
 @Database(
     entities = [TransactionResponse::class],
@@ -18,6 +19,7 @@ import com.netpluspay.nibssclient.dao.TransactionResponseDao
 )
 abstract class AppDatabase : RoomDatabase() {
 
+    abstract fun transactionTrackingTableDao(): TransactionTrackingTableDao
     abstract fun transactionResponseDao(): TransactionResponseDao
 
     companion object {
