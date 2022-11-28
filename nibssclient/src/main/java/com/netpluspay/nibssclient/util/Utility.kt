@@ -94,7 +94,8 @@ object Utility {
 
     fun MakePaymentParams.getTransactionResponseToLog(
         cardScheme: String,
-        requestData: TransactionRequestData
+        requestData: TransactionRequestData,
+        rrn: String?
     ) =
         this.cardData.expiryDate.let {
             val mid = Singletons.getConfigData()?.cardAcceptorIdCode ?: ""
@@ -103,7 +104,7 @@ object Utility {
                     status = "PENDING",
                     TransactionWithRemark(
                         AID = "",
-                        rrn = getCustomRrn(),
+                        rrn = rrn ?: getCustomRrn(),
                         STAN = generateRandomRrn(6),
                         TSI = "",
                         TVR = "",
@@ -119,7 +120,7 @@ object Utility {
                         id = 0,
                         localDate_13 = RandomNumUtil.getDate(),
                         localTime_12 = formattedTime.replace(":", ""),
-                        maskedPan = cardData!!.pan,
+                        maskedPan = cardData.pan,
                         merchantId = mid,
                         originalForwardingInstCode = "",
                         otherAmount = requestData.otherAmount.toInt(),

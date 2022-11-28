@@ -82,6 +82,38 @@ object ModelObjects {
             responseDE55 = transRespX.responseDE55
         }
 
+    fun mapToTransactionResponseX(transRespX: TransactionResponse): TransactionResponseX =
+        TransactionResponseX(
+            transactionType = transRespX.transactionType.name,
+            maskedPan = transRespX.maskedPan,
+            amount = transRespX.amount.toInt(),
+            transmissionDateTime = transRespX.transmissionDateTime,
+            STAN = transRespX.STAN,
+            rrn = transRespX.RRN,
+            localTime_12 = transRespX.localTime_12,
+            localDate_13 = transRespX.localDate_13,
+            otherAmount = transRespX.otherAmount.toInt(),
+            acquiringInstCode = transRespX.acquiringInstCode,
+            originalForwardingInstCode = transRespX.originalForwardingInstCode,
+            authCode = transRespX.authCode,
+            responseCode = transRespX.responseCode,
+            additionalAmount_54 = transRespX.additionalAmount_54,
+            cardLabel = transRespX.cardLabel,
+            cardExpiry = transRespX.cardExpiry,
+            cardHolder = transRespX.cardHolder,
+            TVR = transRespX.TVR,
+            TSI = transRespX.TSI,
+            AID = transRespX.AID,
+            appCryptogram = transRespX.appCryptogram,
+            transactionTimeInMillis = transRespX.transactionTimeInMillis,
+            accountType = transRespX.accountType.name,
+            terminalId = transRespX.terminalId,
+            merchantId = transRespX.merchantId,
+            otherId = transRespX.otherId,
+            responseDE55 = transRespX.responseDE55 ?: "",
+            id = transRespX.id.toInt()
+        )
+
     fun Disposable.disposeWith(compDis: CompositeDisposable) {
         compDis.add(this)
     }

@@ -28,3 +28,8 @@ interface StormApiService {
         @Path("partnerId") partnerId: String
     ): Single<GetPartnerInterSwitchThresholdResponse?>
 }
+
+interface RrnApiService {
+    @GET("https://getrrn.netpluspay.com")
+    fun getRrn(): Single<String>
+}

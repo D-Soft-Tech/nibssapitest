@@ -18,9 +18,9 @@ class StormApiClient {
             val loggingInterceptor = HttpLoggingInterceptor()
             loggingInterceptor.level = HttpLoggingInterceptor.Level.BODY
             okHttpClientBuilder.addInterceptor(loggingInterceptor)
-                .connectTimeout(120, TimeUnit.SECONDS)
-                .readTimeout(120, TimeUnit.SECONDS)
-                .writeTimeout(120, TimeUnit.SECONDS)
+                .connectTimeout(180, TimeUnit.SECONDS)
+                .readTimeout(180, TimeUnit.SECONDS)
+                .writeTimeout(180, TimeUnit.SECONDS)
 
             return okHttpClientBuilder
         }
@@ -36,6 +36,20 @@ class StormApiClient {
                 .create(StormApiService::class.java)
                 .also {
                     LOGGING_INSTANCE = it
+                }
+        }
+
+        private var RRN_LOGGING_INSTANCE: RrnApiService? = null
+        fun getRrnServiceInstance(): RrnApiService = RRN_LOGGING_INSTANCE ?: synchronized(this) {
+            RRN_LOGGING_INSTANCE ?: Retrofit.Builder()
+                .baseUrl("https://getrrn.netpluspay.com")
+                .client(getBaseOkhttpClientBuilder().build())
+                .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
+                .addConverterFactory(GsonConverterFactory.create())
+                .build()
+                .create(RrnApiService::class.java)
+                .also {
+                    RRN_LOGGING_INSTANCE = it
                 }
         }
     }

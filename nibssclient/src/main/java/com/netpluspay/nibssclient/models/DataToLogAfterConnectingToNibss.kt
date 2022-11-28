@@ -1,7 +1,12 @@
 package com.netpluspay.nibssclient.models
 
+import com.danbamitale.epmslib.entities.PosMode
+import com.danbamitale.epmslib.entities.TransactionResponse
+import com.danbamitale.epmslib.entities.TransactionType
+import com.danbamitale.epmslib.entities.responseMessage
+import com.danbamitale.epmslib.utils.IsoAccountType
 import com.google.gson.JsonObject
-import java.util.* // ktlint-disable no-wildcard-imports
+import java.util.*
 
 data class DataToLogAfterConnectingToNibss(
     val status: String,
@@ -51,6 +56,76 @@ data class TransactionWithRemark(
     val transmissionDateTime: String,
     val remark: String = ""
 )
+
+fun mapToTransactionResponse(transWithRemark: TransactionWithRemark) =
+    TransactionResponse().apply {
+        transactionType = TransactionType.valueOf(transWithRemark.transactionType)
+        maskedPan = transWithRemark.maskedPan
+        amount = transWithRemark.amount.toLong()
+        transmissionDateTime = transWithRemark.transmissionDateTime
+        STAN = transWithRemark.STAN
+        RRN = transWithRemark.rrn
+        localTime_12 = transWithRemark.localTime_12
+        localDate_13 = transWithRemark.localDate_13
+        otherAmount = transWithRemark.otherAmount.toLong()
+        acquiringInstCode = transWithRemark.acquiringInstCode
+        originalForwardingInstCode = transWithRemark.originalForwardingInstCode
+        authCode = transWithRemark.authCode
+        responseCode = transWithRemark.responseCode
+        additionalAmount_54 = transWithRemark.additionalAmount_54
+        echoData = ""
+        cardLabel = transWithRemark.cardLabel
+        cardExpiry = transWithRemark.cardExpiry
+        cardHolder = transWithRemark.cardHolder
+        TVR = transWithRemark.TVR
+        TSI = transWithRemark.TSI
+        AID = transWithRemark.AID
+        appCryptogram = transWithRemark.appCryptogram
+        transactionTimeInMillis = 0L
+        accountType = IsoAccountType.valueOf(transWithRemark.accountType)
+        terminalId = transWithRemark.terminalId
+        merchantId = transWithRemark.merchantId
+        otherId = transWithRemark.otherId
+
+        id = transWithRemark.id.toLong()
+        responseDE55 = transWithRemark.responseDE55
+        source = PosMode.EPMS
+        interSwitchThreshold = 0L
+    }
+
+fun mapTransactionResponseToTransactionWithRemark(transWithRemark: TransactionResponse): TransactionWithRemark {
+    return TransactionWithRemark(
+        transactionType = transWithRemark.transactionType.name,
+        maskedPan = transWithRemark.maskedPan,
+        amount = transWithRemark.amount.toInt(),
+        transmissionDateTime = transWithRemark.transmissionDateTime,
+        STAN = transWithRemark.STAN,
+        rrn = transWithRemark.RRN,
+        localTime_12 = transWithRemark.localTime_12,
+        localDate_13 = transWithRemark.localDate_13,
+        otherAmount = transWithRemark.otherAmount.toInt(),
+        acquiringInstCode = transWithRemark.acquiringInstCode,
+        originalForwardingInstCode = transWithRemark.originalForwardingInstCode,
+        authCode = transWithRemark.authCode,
+        responseCode = transWithRemark.responseCode,
+        additionalAmount_54 = transWithRemark.additionalAmount_54,
+        cardLabel = transWithRemark.cardLabel,
+        cardExpiry = transWithRemark.cardExpiry,
+        cardHolder = transWithRemark.cardHolder,
+        TVR = transWithRemark.TVR,
+        TSI = transWithRemark.TSI,
+        AID = transWithRemark.AID,
+        appCryptogram = transWithRemark.appCryptogram,
+        transactionTimeInMillis = transWithRemark.transactionTimeInMillis,
+        accountType = transWithRemark.accountType.name,
+        terminalId = transWithRemark.terminalId,
+        merchantId = transWithRemark.merchantId,
+        otherId = transWithRemark.otherId,
+        id = transWithRemark.id.toInt(),
+        responseDE55 = transWithRemark.responseDE55 ?: "",
+        responseMessage = transWithRemark.responseMessage
+    )
+}
 
 data class TransactionResponseX(
     val AID: String,

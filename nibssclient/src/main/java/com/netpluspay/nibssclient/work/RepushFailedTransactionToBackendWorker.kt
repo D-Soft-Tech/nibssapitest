@@ -5,6 +5,7 @@ import androidx.work.Worker
 import androidx.work.WorkerParameters
 import com.netpluspay.nibssclient.database.AppDatabase
 import com.netpluspay.nibssclient.models.DataToLogAfterConnectingToNibss
+import com.netpluspay.nibssclient.models.mapTransactionResponseToTransactionWithRemark
 import com.netpluspay.nibssclient.network.StormApiClient
 import com.netpluspay.nibssclient.work.ModelObjects.disposeWith
 import io.reactivex.android.schedulers.AndroidSchedulers
@@ -51,7 +52,7 @@ class RepushFailedTransactionToBackendWorker(
             ),
             transactionToRepush.temporalRRN
         )
-        stormApiService.updateLogAfterConnectingToNibss(
+        stormApiService.updateLogAfterConnectingToNibss2(
             transactionToRepush.temporalRRN,
             transactionResponse
         ).subscribeOn(Schedulers.io())

@@ -22,8 +22,10 @@ import com.isw.iswclient.request.IswParameters
 import com.isw.iswclient.request.TokenPassportRequest
 import com.netpluspay.nibssclient.R
 import com.netpluspay.nibssclient.dao.TransactionResponseDao
+import com.netpluspay.nibssclient.dao.TransactionTrackingTableDao
 import com.netpluspay.nibssclient.database.AppDatabase
 import com.netpluspay.nibssclient.models.* // ktlint-disable no-wildcard-imports
+import com.netpluspay.nibssclient.network.RrnApiService
 import com.netpluspay.nibssclient.network.StormApiClient
 import com.netpluspay.nibssclient.network.StormApiService
 import com.netpluspay.nibssclient.util.Constants.ISW_TOKEN
@@ -40,6 +42,9 @@ import com.netpluspay.nibssclient.util.Singletons.getSavedConfigurationData
 import com.netpluspay.nibssclient.util.Singletons.setConfigData
 import com.netpluspay.nibssclient.util.Utility.getTransactionResponseToLog
 import com.netpluspay.nibssclient.util.alerts.Alerter.showToast
+import com.netpluspay.nibssclient.work.ModelObjects
+import com.netpluspay.nibssclient.work.ModelObjects.disposeWith
+import com.netpluspay.nibssclient.work.ModelObjects.mapToTransactionResponseX
 import com.pixplicity.easyprefs.library.Prefs
 import io.reactivex.Single
 import io.reactivex.android.schedulers.AndroidSchedulers
@@ -59,6 +64,7 @@ object NewNibssApiWrapper {
     private var transResp: TransactionResponse? = null
 
     private val stormApiService: StormApiService = StormApiClient.getStormApiLoginInstance()
+    private val rrnApiService: RrnApiService = StormApiClient.getRrnServiceInstance()
     private var configurationData: ConfigurationData = getSavedConfigurationData()
     private var user: User? = null
     private val disposables = CompositeDisposable()
@@ -248,6 +254,8 @@ object NewNibssApiWrapper {
 //        getThreshold()
         // some comments here
         transactionResponseDao = AppDatabase.getDatabaseInstance(context).transactionResponseDao()
+        val transactionTrackingTableDao =
+            AppDatabase.getDatabaseInstance(context).transactionTrackingTableDao()
         val params = gson.fromJson(makePaymentParams, MakePaymentParams::class.java)
         validateField(params.amount)
 
@@ -267,7 +275,8 @@ object NewNibssApiWrapper {
             makePaymentParams,
             cardScheme,
             cardHolder,
-            remark
+            remark,
+            transactionTrackingTableDao
         )
 //        } else {
 //            if (params.amount.toDouble() < 15 /*thresHold.toDouble()*/) {
@@ -301,7 +310,8 @@ object NewNibssApiWrapper {
         makePaymentParams: String,
         cardScheme: String,
         cardHolder: String,
-        remark: String
+        remark: String,
+        transactionTrackingTableDao: TransactionTrackingTableDao
     ): Single<TransactionWithRemark?> {
         val transactionType =
             inputTransactionType?.let { TransactionType.valueOf(it) } ?: TransactionType.PURCHASE
@@ -345,52 +355,11 @@ object NewNibssApiWrapper {
         // Send to backend first
         logTransactionToBackEndBeforeMakingPayment(transactionToLog)
         val processor = TransactionProcessor(hostConfig)
-        return processor.processTransaction(context, requestData, params.cardData)
-            .doOnError {
-                Log.d("ERROR1", it.localizedMessage.toString())
-            }
-            .onErrorResumeNext {
-                processor.rollback(context, MessageReasonCode.Timeout)
-            }
-            .flatMap {
-                transResp = it
-                if (it.responseCode == "A3") {
-                    Prefs.remove(PREF_CONFIG_DATA)
-                    Prefs.remove(PREF_KEYHOLDER)
-                    configureTerminal(context)
-                }
 
-                it.cardHolder = cardHolder
-                it.cardLabel = cardScheme
-                it.amount = requestData.amount
-                lastTransactionResponse.postValue(it)
-                val message =
-                    (if (it.responseCode == "00") "Transaction Approved" else "Transaction Not approved")
-                Timber.d("RESPONSE=>$it")
-                showToast(message, context)
-                transactionResponseDao
-                    .insertNewTransaction(it)
-                Single.just(it)
-            }.flatMap {
-                val resp = lastTransactionResponse.value!!
-                if (resp.responseCode == "00") {
-                    updateTransactionInBackendAfterMakingPayment(
-                        transactionToLog.transactionResponse.rrn,
-                        mapDanbamitaleResponseToResponseWithRrn(resp, remark),
-                        "APPROVED"
-                    )
-                } else {
-                    updateTransactionInBackendAfterMakingPayment(
-                        rrn = transactionToLog.transactionResponse.rrn,
-                        transactionResponse = mapDanbamitaleResponseToResponseWithRrn(
-                            resp,
-                            remark = remark
-                        ),
-                        status = resp.responseMessage
-                    )
-                }
-                Single.just(mapDanbamitaleResponseToResponseWithRrn(resp, remark))
-            }
+    }
+
+    fun getProcessor() {
+
     }
 
     private fun logTransactionToBackEndBeforeMakingPayment(dataToLog: TransactionToLogBeforeConnectingToNibbs) {
@@ -412,7 +381,8 @@ object NewNibssApiWrapper {
     private fun updateTransactionInBackendAfterMakingPayment(
         rrn: String,
         transactionResponse: TransactionWithRemark,
-        status: String
+        status: String,
+        transactionTrackingTableDao: TransactionTrackingTableDao
     ) {
         val dataToLog = DataToLogAfterConnectingToNibss(status, transactionResponse, rrn)
         compositeDisposable.add(
@@ -420,6 +390,14 @@ object NewNibssApiWrapper {
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .doOnError {
+                    saveTransactionForTracking(
+                        ModelObjects.TransactionResponseXForTracking(
+                            dataToLog.rrn,
+                            mapToTransactionResponseX(mapToTransactionResponse(dataToLog.transactionResponse)),
+                            dataToLog.status
+                        ),
+                        transactionTrackingTableDao
+                    )
                     Timber.d("ERROR_UPDATING_TRANS==>${it.localizedMessage}")
                 }
                 .subscribe { t1, t2 ->
@@ -427,6 +405,22 @@ object NewNibssApiWrapper {
                     t2?.let { Timber.d("ERROR_UPDATING_TRANS2==>${it.message}") }
                 }
         )
+    }
+
+    private fun saveTransactionForTracking(
+        transactionResponse: ModelObjects.TransactionResponseXForTracking,
+        transactionTrackingTableDao: TransactionTrackingTableDao
+    ) {
+        transactionTrackingTableDao.insertTransactionForTracking(transactionResponse)
+            .subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe { t1, t2 ->
+                t1?.let {
+                }
+                t2?.let {
+                    Timber.d(it.localizedMessage)
+                }
+            }.disposeWith(compositeDisposable)
     }
 
     private fun getIswToken(context: Context): String {
@@ -493,7 +487,8 @@ object NewNibssApiWrapper {
         makePaymentParams: String,
         cardScheme: String,
         cardHolder: String,
-        remark: String
+        remark: String,
+        transactionTrackingTableDao: TransactionTrackingTableDao
     ): Single<TransactionWithRemark?> {
         val customRrn = generateRandomRrn(12)
         val params = gson.fromJson(makePaymentParams, MakePaymentParams::class.java)
@@ -597,7 +592,8 @@ object NewNibssApiWrapper {
                         updateTransactionInBackendAfterMakingPayment(
                             transactionToLog.transactionResponse.rrn,
                             mapDanbamitaleResponseToResponseWithRrn(resp, remark),
-                            "APPROVED"
+                            "APPROVED",
+                            transactionTrackingTableDao
                         )
                     } else {
                         updateTransactionInBackendAfterMakingPayment(
@@ -606,7 +602,8 @@ object NewNibssApiWrapper {
                                 resp,
                                 remark = remark
                             ),
-                            status = resp.responseMessage
+                            status = resp.responseMessage,
+                            transactionTrackingTableDao
                         )
                     }
 
@@ -614,4 +611,9 @@ object NewNibssApiWrapper {
                 }
         }
     }
+
+    fun getRRn() =
+        rrnApiService.getRrn()
+            .subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
 }
