@@ -2,6 +2,7 @@ package com.netpluspay.nibssclient.network
 
 import com.netpluspay.nibssclient.models.* // ktlint-disable no-wildcard-imports
 import io.reactivex.Single
+import retrofit2.Response
 import retrofit2.http.* // ktlint-disable no-wildcard-imports
 
 interface StormApiService {
@@ -15,6 +16,12 @@ interface StormApiService {
         @Path("rrn") rrn: String,
         @Body data: DataToLogAfterConnectingToNibss
     ): Single<LogToBackendResponse>
+
+    @PUT("/pos_transaction/{rrn}")
+    fun updateLogAfterConnectingToNibss2(
+        @Path("rrn") rrn: String,
+        @Body data: DataToLogAfterConnectingToNibss
+    ): Single<Response<LogToBackendResponse>>
 
     @GET("/partners/{partnerId}/isw_threshold")
     fun getPartnerInterSwitchThreshold(
