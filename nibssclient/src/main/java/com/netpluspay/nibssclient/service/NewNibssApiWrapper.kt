@@ -7,7 +7,11 @@ import android.util.Log
 import android.widget.Toast
 import androidx.lifecycle.MutableLiveData
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
-import com.danbamitale.epmslib.entities.* // ktlint-disable no-wildcard-imports
+import androidx.work.Constraints
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import com.danbamitale.epmslib.entities.*
 import com.danbamitale.epmslib.entities.KeyHolder
 import com.danbamitale.epmslib.entities.TransactionResponse
 import com.danbamitale.epmslib.entities.TransactionType
@@ -24,7 +28,7 @@ import com.netpluspay.nibssclient.R
 import com.netpluspay.nibssclient.dao.TransactionResponseDao
 import com.netpluspay.nibssclient.dao.TransactionTrackingTableDao
 import com.netpluspay.nibssclient.database.AppDatabase
-import com.netpluspay.nibssclient.models.* // ktlint-disable no-wildcard-imports
+import com.netpluspay.nibssclient.models.*
 import com.netpluspay.nibssclient.network.RrnApiService
 import com.netpluspay.nibssclient.network.StormApiClient
 import com.netpluspay.nibssclient.network.StormApiService
@@ -45,6 +49,7 @@ import com.netpluspay.nibssclient.util.alerts.Alerter.showToast
 import com.netpluspay.nibssclient.work.ModelObjects
 import com.netpluspay.nibssclient.work.ModelObjects.disposeWith
 import com.netpluspay.nibssclient.work.ModelObjects.mapToTransactionResponseX
+import com.netpluspay.nibssclient.work.RepushFailedTransactionToBackendWorker
 import com.pixplicity.easyprefs.library.Prefs
 import io.reactivex.Single
 import io.reactivex.android.schedulers.AndroidSchedulers
@@ -58,6 +63,7 @@ private const val DEFAULT_TERMINAL_ID = "2057H63U"
 
 object NewNibssApiWrapper {
     private lateinit var transactionResponseDao: TransactionResponseDao
+    private lateinit var workManager: WorkManager
     private val gson = Gson()
     private var amountDbl = 0.0
     private var amountLong = 0L
@@ -118,6 +124,9 @@ object NewNibssApiWrapper {
         configureSilently: Boolean = false,
         serializedUserData: String
     ): Single<Pair<KeyHolder?, ConfigData?>> {
+        // Repush failed transactions back to server
+        workManager = WorkManager.getInstance(context.applicationContext)
+        repushTransactionsToBackend()
         user = Singletons.getCurrentlyLoggedInUser()
         logUser(context, serializedUserData)
         setCurrentlyLoggedInUser()
@@ -155,38 +164,6 @@ object NewNibssApiWrapper {
             else -> configureTerminal(context)
         }
         return req
-
-//        val disposable = req.subscribeOn(Schedulers.io())
-//            .observeOn(AndroidSchedulers.mainThread())
-//            .doOnSubscribe {
-//                isConfigurationInProcess = true
-//            }
-//            .doFinally { isConfigurationInProcess = false }
-//            .subscribe { pair, error ->
-//                error?.let {
-//                    // TerminalManager.getInstance().beep(context, TerminalManager.BEEP_MODE_FAILURE)
-//                    configurationStatus = -1
-//                    sendIntent.putExtra(CONFIGURATION_STATUS, configurationStatus)
-//                    localBroadcastManager.sendBroadcast(sendIntent)
-//                    Timber.e(it)
-//                }
-//                pair?.let { data ->
-//                    data.first?.let {
-//                        Prefs.putLong(LAST_POS_CONFIGURATION_TIME, System.currentTimeMillis())
-//                        Prefs.putString(PREF_CONFIG_DATA, gson.toJson(data.second))
-//                        Prefs.putString(PREF_KEYHOLDER, gson.toJson(data.first))
-//                        this.configData = data.second
-//                        this.keyHolder = data.first
-//                    }
-//                    configurationStatus = 1
-//                    sendIntent.putExtra(CONFIGURATION_STATUS, configurationStatus)
-//                    localBroadcastManager.sendBroadcast(sendIntent)
-//                    Timber.e("Config data set")
-// //                    disposeDisposables()
-//                }
-//            }
-//        disposables.add(disposable)
-//        return Single.just(Pair(this.keyHolder, this.configData))
     }
 
     fun callHome(context: Context): Single<Pair<KeyHolder?, ConfigData?>> {
@@ -242,6 +219,17 @@ object NewNibssApiWrapper {
         disposables.clear()
     }
 
+    private fun repushTransactionsToBackend() {
+        val workRequest = OneTimeWorkRequestBuilder<RepushFailedTransactionToBackendWorker>()
+            .setConstraints(
+                Constraints.Builder()
+                    .setRequiredNetworkType(
+                        NetworkType.CONNECTED
+                    ).build()
+            ).build()
+        workManager.enqueue(workRequest)
+    }
+
     fun makePayment(
         context: Context,
         terminalId: String? = "",
@@ -252,6 +240,8 @@ object NewNibssApiWrapper {
     ): Single<TransactionWithRemark?> {
 //        getIswToken(context)
 //        getThreshold()
+        val rrnGottenFromServer = getRRn()
+        val rrnFromServer = if (rrnGottenFromServer.isNullOrEmpty()) null else rrnGottenFromServer
         // some comments here
         transactionResponseDao = AppDatabase.getDatabaseInstance(context).transactionResponseDao()
         val transactionTrackingTableDao =
@@ -267,7 +257,6 @@ object NewNibssApiWrapper {
                 GetPartnerInterSwitchThresholdResponse::class.java
             )?.interSwitchThreshold ?: 0
 
-//        return if (thresHold == 0) {
         return makePaymentViaNibss(
             context,
             null,
@@ -276,31 +265,9 @@ object NewNibssApiWrapper {
             cardScheme,
             cardHolder,
             remark,
-            transactionTrackingTableDao
+            transactionTrackingTableDao,
+            rrnFromServer
         )
-//        } else {
-//            if (params.amount.toDouble() < 15 /*thresHold.toDouble()*/) {
-//                makePaymentViaNibss(
-//                    context,
-//                    null,
-//                    terminalId,
-//                    makePaymentParams,
-//                    cardScheme,
-//                    cardHolder,
-//                    remark
-//                )
-//            } else {
-//                processTransactionViaInterSwitchMakePayment(
-//                    context,
-//                    null,
-//                    terminalId,
-//                    makePaymentParams,
-//                    cardScheme,
-//                    cardHolder,
-//                    remark
-//                )
-//            }
-//        }
     }
 
     private fun makePaymentViaNibss(
@@ -311,7 +278,8 @@ object NewNibssApiWrapper {
         cardScheme: String,
         cardHolder: String,
         remark: String,
-        transactionTrackingTableDao: TransactionTrackingTableDao
+        transactionTrackingTableDao: TransactionTrackingTableDao,
+        rrn: String?
     ): Single<TransactionWithRemark?> {
         val transactionType =
             inputTransactionType?.let { TransactionType.valueOf(it) } ?: TransactionType.PURCHASE
@@ -350,16 +318,59 @@ object NewNibssApiWrapper {
                 accountType = IsoAccountType.parseStringAccountType(params.accountType.name)
             )
 
-        val transactionToLog = params.getTransactionResponseToLog(cardScheme, requestData)
+        val transactionToLog = params.getTransactionResponseToLog(cardScheme, requestData, rrn)
 
         // Send to backend first
         logTransactionToBackEndBeforeMakingPayment(transactionToLog)
         val processor = TransactionProcessor(hostConfig)
+        return processor.processTransaction(context, requestData, params.cardData)
+            .doOnError {
+                Log.d("ERROR1", it.localizedMessage.toString())
+            }
+            .onErrorResumeNext {
+                processor.rollback(context, MessageReasonCode.Timeout)
+            }
+            .flatMap {
+                transResp = it
+                if (it.responseCode == "A3") {
+                    Prefs.remove(PREF_CONFIG_DATA)
+                    Prefs.remove(PREF_KEYHOLDER)
+                    configureTerminal(context)
+                }
 
-    }
-
-    fun getProcessor() {
-
+                it.cardHolder = cardHolder
+                it.cardLabel = cardScheme
+                it.amount = requestData.amount
+                lastTransactionResponse.postValue(it)
+                val message =
+                    (if (it.responseCode == "00") "Transaction Approved" else "Transaction Not approved")
+                Timber.d("RESPONSE=>$it")
+                showToast(message, context)
+                transactionResponseDao
+                    .insertNewTransaction(it)
+                Single.just(it)
+            }.flatMap {
+                val resp = lastTransactionResponse.value!!
+                if (resp.responseCode == "00") {
+                    updateTransactionInBackendAfterMakingPayment(
+                        transactionToLog.transactionResponse.rrn,
+                        mapDanbamitaleResponseToResponseWithRrn(resp, remark),
+                        "APPROVED",
+                        transactionTrackingTableDao
+                    )
+                } else {
+                    updateTransactionInBackendAfterMakingPayment(
+                        rrn = transactionToLog.transactionResponse.rrn,
+                        transactionResponse = mapDanbamitaleResponseToResponseWithRrn(
+                            resp,
+                            remark = remark
+                        ),
+                        status = resp.responseMessage,
+                        transactionTrackingTableDao
+                    )
+                }
+                Single.just(mapDanbamitaleResponseToResponseWithRrn(resp, remark))
+            }
     }
 
     private fun logTransactionToBackEndBeforeMakingPayment(dataToLog: TransactionToLogBeforeConnectingToNibbs) {
@@ -400,6 +411,7 @@ object NewNibssApiWrapper {
                     )
                     Timber.d("ERROR_UPDATING_TRANS==>${it.localizedMessage}")
                 }
+                .onErrorResumeNext(Single.just(LogToBackendResponse(listOf(1), "", "failed")))
                 .subscribe { t1, t2 ->
                     t1?.let { Timber.d("UPDATED_TRANS==>${it.status}, ${it.message}, ${it.data[0]}") }
                     t2?.let { Timber.d("ERROR_UPDATING_TRANS2==>${it.message}") }
@@ -416,9 +428,10 @@ object NewNibssApiWrapper {
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe { t1, t2 ->
                 t1?.let {
+                    Timber.d("SUCCESS_SAVING_FOR_TRACKING=====>%s", it.toString())
                 }
                 t2?.let {
-                    Timber.d(it.localizedMessage)
+                    Timber.d("ERROR_SAVING_FOR_TRACKING=====>%s", it.localizedMessage)
                 }
             }.disposeWith(compositeDisposable)
     }
@@ -488,7 +501,8 @@ object NewNibssApiWrapper {
         cardScheme: String,
         cardHolder: String,
         remark: String,
-        transactionTrackingTableDao: TransactionTrackingTableDao
+        transactionTrackingTableDao: TransactionTrackingTableDao,
+        rrn: String?
     ): Single<TransactionWithRemark?> {
         val customRrn = generateRandomRrn(12)
         val params = gson.fromJson(makePaymentParams, MakePaymentParams::class.java)
@@ -562,7 +576,7 @@ object NewNibssApiWrapper {
                 configData = configData
             )
 
-        val transactionToLog = params.getTransactionResponseToLog(cardScheme, requestData)
+        val transactionToLog = params.getTransactionResponseToLog(cardScheme, requestData, rrn)
 
         // Send to backend first
         logTransactionToBackEndBeforeMakingPayment(transactionToLog)
@@ -612,8 +626,9 @@ object NewNibssApiWrapper {
         }
     }
 
-    fun getRRn() =
+    fun getRRn(): String? =
         rrnApiService.getRrn()
             .subscribeOn(Schedulers.io())
-            .observeOn(AndroidSchedulers.mainThread())
+            .onErrorResumeNext(Single.just(""))
+            .blockingGet()
 }

@@ -8,10 +8,11 @@ import androidx.room.TypeConverters
 import com.danbamitale.epmslib.entities.TransactionResponse
 import com.netpluspay.nibssclient.dao.TransactionResponseDao
 import com.netpluspay.nibssclient.dao.TransactionTrackingTableDao
+import com.netpluspay.nibssclient.work.ModelObjects
 
 @Database(
-    entities = [TransactionResponse::class],
-    version = 7,
+    entities = [TransactionResponse::class, ModelObjects.TransactionResponseXForTracking::class],
+    version = 8,
     exportSchema = false
 )
 @TypeConverters(

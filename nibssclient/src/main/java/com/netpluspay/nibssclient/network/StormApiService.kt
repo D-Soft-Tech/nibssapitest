@@ -30,6 +30,6 @@ interface StormApiService {
 }
 
 interface RrnApiService {
-    @GET("https://getrrn.netpluspay.com")
+    @GET("/")
     fun getRrn(): Single<String>
 }
