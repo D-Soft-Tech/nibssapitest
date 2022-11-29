@@ -3,7 +3,6 @@ package com.netpluspay.nibssclient.service
 import android.content.Context
 import android.content.Intent
 import android.text.format.DateUtils
-import android.util.Log
 import android.widget.Toast
 import androidx.lifecycle.MutableLiveData
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
@@ -238,10 +237,9 @@ object NewNibssApiWrapper {
         cardHolder: String,
         remark: String
     ): Single<TransactionWithRemark?> {
-//        getIswToken(context)
-//        getThreshold()
         val rrnGottenFromServer = getRRn()
-        val rrnFromServer = if (rrnGottenFromServer.isNullOrEmpty()) null else rrnGottenFromServer
+        val rrnFromServer =
+            if (rrnGottenFromServer.isNullOrEmpty()) generateRandomRrn(12) else rrnGottenFromServer
         // some comments here
         transactionResponseDao = AppDatabase.getDatabaseInstance(context).transactionResponseDao()
         val transactionTrackingTableDao =
@@ -315,7 +313,8 @@ object NewNibssApiWrapper {
                 transactionType,
                 amountLong,
                 0L,
-                accountType = IsoAccountType.parseStringAccountType(params.accountType.name)
+                accountType = IsoAccountType.parseStringAccountType(params.accountType.name),
+                RRN = rrn
             )
 
         val transactionToLog = params.getTransactionResponseToLog(cardScheme, requestData, rrn)
@@ -324,12 +323,7 @@ object NewNibssApiWrapper {
         logTransactionToBackEndBeforeMakingPayment(transactionToLog)
         val processor = TransactionProcessor(hostConfig)
         return processor.processTransaction(context, requestData, params.cardData)
-            .doOnError {
-                Log.d("ERROR1", it.localizedMessage.toString())
-            }
-            .onErrorResumeNext {
-                processor.rollback(context, MessageReasonCode.Timeout)
-            }
+            .onErrorResumeNext { processor.rollback(context, MessageReasonCode.Timeout) }
             .flatMap {
                 transResp = it
                 if (it.responseCode == "A3") {
@@ -341,7 +335,7 @@ object NewNibssApiWrapper {
                 it.cardHolder = cardHolder
                 it.cardLabel = cardScheme
                 it.amount = requestData.amount
-                lastTransactionResponse.postValue(it)
+                lastTransactionResponse.postValue(rrn?.let { it1 -> it.copy(RRN = it1) } ?: it)
                 val message =
                     (if (it.responseCode == "00") "Transaction Approved" else "Transaction Not approved")
                 Timber.d("RESPONSE=>$it")
@@ -354,7 +348,7 @@ object NewNibssApiWrapper {
                 if (resp.responseCode == "00") {
                     updateTransactionInBackendAfterMakingPayment(
                         transactionToLog.transactionResponse.rrn,
-                        mapDanbamitaleResponseToResponseWithRrn(resp, remark),
+                        mapDanbamitaleResponseToResponseWithRrn(resp, remark, rrn),
                         "APPROVED",
                         transactionTrackingTableDao
                     )
@@ -363,13 +357,15 @@ object NewNibssApiWrapper {
                         rrn = transactionToLog.transactionResponse.rrn,
                         transactionResponse = mapDanbamitaleResponseToResponseWithRrn(
                             resp,
-                            remark = remark
+                            remark = remark,
+                            rrn
                         ),
                         status = resp.responseMessage,
                         transactionTrackingTableDao
                     )
                 }
-                Single.just(mapDanbamitaleResponseToResponseWithRrn(resp, remark))
+                Timber.d("DATA_CURRENT_RESPONSE====>%s", gson.toJson(resp))
+                Single.just(mapDanbamitaleResponseToResponseWithRrn(resp, remark, rrn))
             }
     }
 
@@ -593,7 +589,7 @@ object NewNibssApiWrapper {
                     it.cardHolder = cardHolder
                     it.cardLabel = cardScheme
                     it.amount = requestData.amount
-                    lastTransactionResponse.postValue(it)
+                    lastTransactionResponse.postValue(rrn?.let { it1 -> it.copy(RRN = it1) } ?: it)
                     val message =
                         (if (it.responseCode == "00") "Transaction Approved" else "Transaction Not approved")
                     Timber.d("RESPONSE=>$it")
@@ -605,7 +601,7 @@ object NewNibssApiWrapper {
                     if (resp.responseCode == "00") {
                         updateTransactionInBackendAfterMakingPayment(
                             transactionToLog.transactionResponse.rrn,
-                            mapDanbamitaleResponseToResponseWithRrn(resp, remark),
+                            mapDanbamitaleResponseToResponseWithRrn(resp, remark, rrn),
                             "APPROVED",
                             transactionTrackingTableDao
                         )
@@ -614,14 +610,15 @@ object NewNibssApiWrapper {
                             rrn = transactionToLog.transactionResponse.rrn,
                             transactionResponse = mapDanbamitaleResponseToResponseWithRrn(
                                 resp,
-                                remark = remark
+                                remark = remark,
+                                rrn
                             ),
                             status = resp.responseMessage,
                             transactionTrackingTableDao
                         )
                     }
 
-                    Single.just(mapDanbamitaleResponseToResponseWithRrn(resp, remark))
+                    Single.just(mapDanbamitaleResponseToResponseWithRrn(resp, remark, rrn))
                 }
         }
     }

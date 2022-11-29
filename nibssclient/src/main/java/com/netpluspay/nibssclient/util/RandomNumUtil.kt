@@ -1,14 +1,14 @@
 package com.netpluspay.nibssclient.util
 
 import android.annotation.SuppressLint
-import com.danbamitale.epmslib.entities.* // ktlint-disable no-wildcard-imports
 import com.danbamitale.epmslib.entities.TransactionResponse
+import com.danbamitale.epmslib.entities.responseMessage
 import com.netpluspay.nibssclient.models.KeyHolder
 import com.netpluspay.nibssclient.models.TransactionResponseX
 import com.netpluspay.nibssclient.models.TransactionWithRemark
 import java.text.DateFormat
 import java.text.SimpleDateFormat
-import java.util.* // ktlint-disable no-wildcard-imports
+import java.util.*
 
 object RandomNumUtil {
     fun generateRandomRrn(length: Int): String {
@@ -103,11 +103,15 @@ object RandomNumUtil {
         }
     }
 
-    fun mapDanbamitaleResponseToResponseWithRrn(input: TransactionResponse, remark: String): TransactionWithRemark {
+    fun mapDanbamitaleResponseToResponseWithRrn(
+        input: TransactionResponse,
+        remark: String,
+        rrn: String?
+    ): TransactionWithRemark {
         with(input) {
             return TransactionWithRemark(
                 AID = AID,
-                rrn = RRN,
+                rrn = rrn ?: input.RRN,
                 STAN = STAN,
                 TSI = TSI,
                 TVR = TVR,
