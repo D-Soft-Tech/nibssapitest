@@ -31,5 +31,5 @@ interface StormApiService {
 
 interface RrnApiService {
     @GET("/")
-    fun getRrn(): Single<String>
+    fun getRrn(): Single<Response<String>>
 }
