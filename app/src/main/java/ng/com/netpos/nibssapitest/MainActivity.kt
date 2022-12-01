@@ -21,7 +21,6 @@ import com.netpluspay.nibssclient.models.UserData
 import com.netpluspay.nibssclient.service.NewNibssApiWrapper
 import com.pixplicity.easyprefs.library.Prefs
 import com.pos.sdk.emvcore.POIEmvCoreManager
-import io.reactivex.Single
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.schedulers.Schedulers
@@ -39,7 +38,7 @@ class MainActivity : AppCompatActivity() {
             "Netplus",
             "DigiAsteriks",
             "5de231d9-1be0-4c31-8658-6e15892f2b83",
-            "2033ALZP",
+            "2044EZVH",
             NetPosSdk.getDeviceSerial(), // "1142016190000471",
             "Marwa",
             "Doyin"
@@ -187,7 +186,7 @@ class MainActivity : AppCompatActivity() {
                         val makePaymentParams =
                             card?.let { cardData ->
                                 MakePaymentParams(
-                                    amount = 327,
+                                    amount = 207,
                                     terminalId = userData.terminalId,
                                     cardData = cardData,
                                     accountType = IsoAccountType.CURRENT
@@ -203,11 +202,8 @@ class MainActivity : AppCompatActivity() {
                                     it2,
                                     "TestingAgain"
                                 ).subscribeOn(Schedulers.io())
-                                    .onErrorResumeNext {
-                                        Single.just(null)
-                                    }
-                                    .doOnError {
-                                        Log.d("ERROR_THAT_H", it.localizedMessage)
+                                    .doOnError { error ->
+                                        Log.d("ERROR_THAT_HAPPENED===>", Gson().toJson(error))
                                     }
                                     .observeOn(AndroidSchedulers.mainThread())
                                     .subscribe(

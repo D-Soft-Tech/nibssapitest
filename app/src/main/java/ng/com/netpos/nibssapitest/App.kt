@@ -24,7 +24,7 @@ class AppClass : Application() {
         terminalParameters.merchantCode = "3099"
         terminalParameters.merchantName = "NetPlus"
         terminalParameters.merchantId = "2033LAGPOOO7885"
-        terminalParameters.terminalId = "2033ALZP"
+        terminalParameters.terminalId = "2044EZVH"
         loadEmvParams(terminalParameters)
         loadProvidedCapksAndAids()
     }

@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="userMD">2033LAGPOOO7885</string>
+    <string name="error_connecting_to_server">Error connecting to server</string>
 </resources>
