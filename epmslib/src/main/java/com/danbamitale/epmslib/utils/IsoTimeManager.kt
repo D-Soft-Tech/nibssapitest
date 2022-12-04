@@ -7,7 +7,6 @@ class IsoTimeManager {
 
     private val now = Date(System.currentTimeMillis())
 
-
     val longDate: String
         get() = SimpleDateFormat(LONG_DATE, Locale.getDefault()).format(now)
 
@@ -17,11 +16,8 @@ class IsoTimeManager {
     val time: String
         get() = SimpleDateFormat(LONG_TIME, Locale.getDefault()).format(now)
 
-
     val fullDate: String
-        get() =  SimpleDateFormat(FULL_DATE_TIME, Locale.getDefault()).format(now)
-
-
+        get() = SimpleDateFormat(FULL_DATE_TIME, Locale.getDefault()).format(now)
 
     companion object {
         private val LONG_DATE = "MMddHHmmss"

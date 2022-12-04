@@ -2,6 +2,7 @@ package com.netpluspay.nibssclient.service
 
 import android.content.Context
 import android.content.Intent
+import android.os.Build
 import android.text.format.DateUtils
 import android.widget.Toast
 import androidx.lifecycle.MutableLiveData
@@ -10,8 +11,9 @@ import androidx.work.Constraints
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
-import com.danbamitale.epmslib.entities.* // ktlint-disable no-wildcard-imports
+import com.danbamitale.epmslib.entities.*
 import com.danbamitale.epmslib.entities.KeyHolder
+import com.danbamitale.epmslib.entities.OriginalDataElements
 import com.danbamitale.epmslib.entities.TransactionResponse
 import com.danbamitale.epmslib.entities.TransactionType
 import com.danbamitale.epmslib.processors.TerminalConfigurator
@@ -27,7 +29,7 @@ import com.netpluspay.nibssclient.R
 import com.netpluspay.nibssclient.dao.TransactionResponseDao
 import com.netpluspay.nibssclient.dao.TransactionTrackingTableDao
 import com.netpluspay.nibssclient.database.AppDatabase
-import com.netpluspay.nibssclient.models.* // ktlint-disable no-wildcard-imports
+import com.netpluspay.nibssclient.models.*
 import com.netpluspay.nibssclient.network.RrnApiService
 import com.netpluspay.nibssclient.network.StormApiClient
 import com.netpluspay.nibssclient.network.StormApiService
@@ -57,6 +59,9 @@ import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.schedulers.Schedulers
 import retrofit2.Response
 import timber.log.Timber
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.util.*
 
 private const val CONFIGURATION_STATUS = "terminal_configuration_status"
 private const val CONFIGURATION_ACTION = "com.woleapp.netpos.TERMINAL_CONFIGURATION"
@@ -326,7 +331,7 @@ object NewNibssApiWrapper {
         // Send to backend first
         return logTransactionToBackEndBeforeMakingPayment(transactionToLog)
             .subscribeOn(Schedulers.io())
-            .flatMap {
+            .flatMap Foo@{
                 processor.processTransaction(context, requestData, params.cardData)
                     .onErrorResumeNext { processor.rollback(context, MessageReasonCode.Timeout) }
                     .flatMap {
@@ -441,13 +446,19 @@ object NewNibssApiWrapper {
 
         // IsoAccountType.
         this.amountLong = amountDbl.toLong()
+        val originalDataElements =
+            OriginalDataElements(
+                originalTransactionType = transactionType,
+                originalRRN = rrn?.takeLast(12) ?: ""
+            )
         val requestData =
             TransactionRequestData(
                 transactionType,
                 amountLong,
                 0L,
                 accountType = IsoAccountType.parseStringAccountType(params.accountType.name),
-                RRN = rrn
+                RRN = rrn?.takeLast(12),
+                originalDataElements = originalDataElements
             )
 
         val transactionToLog = params.getTransactionResponseToLog(cardScheme, requestData, rrn)
@@ -457,12 +468,55 @@ object NewNibssApiWrapper {
         // Send to backend first
         return logTransactionToBackEndBeforeMakingPayment(transactionToLog)
             .doOnError {
-                Timber.d("ERROR_FROM_FIRST_LOGGING_TO_SERVER=====>%s", "${it.localizedMessage}")
+                Timber.d("ERROR_FROM_FIRST_LOGGING_TO_SERVER=====>%s", it.localizedMessage)
                 return@doOnError
             }
             .flatMap {
                 Timber.d("SUCCESSFULLY_LOGGED_TO_BACKEND=====>%s", gson.toJson(it))
                 processor.processTransaction(context, requestData, params.cardData)
+                    .doFinally {
+                        if (lastTransactionResponse.value!!.responseCode == "00") {
+                            updateTransactionInBackendAfterMakingPaymentA(
+                                transactionToLog.transactionResponse.rrn,
+                                mapDanbamitaleResponseToResponseWithRrn(
+                                    lastTransactionResponse.value!!,
+                                    remark,
+                                    rrn
+                                ),
+                                "APPROVED",
+                                transactionTrackingTableDao
+                            ).subscribeOn(Schedulers.io())
+                                .observeOn(AndroidSchedulers.mainThread())
+                                .subscribe { t1, t2 ->
+                                    t1?.let { resp ->
+                                        Timber.d("$resp")
+                                    }
+                                    t2?.let { error ->
+                                        Timber.d(error.localizedMessage)
+                                    }
+                                }.disposeWith(compositeDisposable)
+                        } else {
+                            updateTransactionInBackendAfterMakingPaymentA(
+                                rrn = transactionToLog.transactionResponse.rrn,
+                                transactionResponse = mapDanbamitaleResponseToResponseWithRrn(
+                                    lastTransactionResponse.value!!,
+                                    remark = remark,
+                                    rrn
+                                ),
+                                status = lastTransactionResponse.value!!.responseMessage,
+                                transactionTrackingTableDao
+                            ).subscribeOn(Schedulers.io())
+                                .observeOn(AndroidSchedulers.mainThread())
+                                .subscribe { t1, t2 ->
+                                    t1?.let { resp ->
+                                        Timber.d("$resp")
+                                    }
+                                    t2?.let { error ->
+                                        Timber.d("${error.localizedMessage}")
+                                    }
+                                }.disposeWith(compositeDisposable)
+                        }
+                    }
                     .onErrorResumeNext {
                         processor.rollback(
                             context,
@@ -479,6 +533,21 @@ object NewNibssApiWrapper {
                             Prefs.remove(PREF_CONFIG_DATA)
                             Prefs.remove(PREF_KEYHOLDER)
                             configureTerminal(context)
+                                .subscribeOn(Schedulers.io())
+                                .observeOn(AndroidSchedulers.mainThread())
+                                .subscribe { data, _ ->
+                                    data?.let { configResult ->
+//                                        IsoTimeManager.
+                                        Prefs.putString(
+                                            PREF_KEYHOLDER,
+                                            gson.toJson(configResult.first)
+                                        )
+                                        Prefs.putString(
+                                            PREF_CONFIG_DATA,
+                                            gson.toJson(configResult.second)
+                                        )
+                                    }
+                                }.disposeWith(compositeDisposable)
                         }
 
                         transResponse.cardHolder = cardHolder
@@ -494,52 +563,13 @@ object NewNibssApiWrapper {
                         showToast(message, context)
                         transactionResponseDao
                             .insertNewTransaction(transResponse)
-                        Single.just(transResponse)
-                    }.flatMap {
-                        val resp = lastTransactionResponse.value!!
-                        if (resp.responseCode == "00") {
-                            updateTransactionInBackendAfterMakingPaymentA(
-                                transactionToLog.transactionResponse.rrn,
-                                mapDanbamitaleResponseToResponseWithRrn(resp, remark, rrn),
-                                "APPROVED",
-                                transactionTrackingTableDao
-                            ).subscribeOn(Schedulers.io())
-                                .zipWith(
-                                    Single.just(
-                                        mapDanbamitaleResponseToResponseWithRrn(
-                                            lastTransactionResponse.value!!,
-                                            remark,
-                                            rrn
-                                        )
-                                    )
-                                ) { _: LogToBackendResponse,
-                                    transWithRemark: TransactionWithRemark ->
-                                    transWithRemark
-                                }
-                        } else {
-                            updateTransactionInBackendAfterMakingPaymentA(
-                                rrn = transactionToLog.transactionResponse.rrn,
-                                transactionResponse = mapDanbamitaleResponseToResponseWithRrn(
-                                    resp,
-                                    remark = remark,
-                                    rrn
-                                ),
-                                status = resp.responseMessage,
-                                transactionTrackingTableDao
-                            ).subscribeOn(Schedulers.io())
-                                .zipWith(
-                                    Single.just(
-                                        mapDanbamitaleResponseToResponseWithRrn(
-                                            lastTransactionResponse.value!!,
-                                            remark,
-                                            rrn
-                                        )
-                                    )
-                                ) { _: LogToBackendResponse,
-                                    transWithRemark: TransactionWithRemark ->
-                                    transWithRemark
-                                }
-                        }
+                        Single.just(
+                            mapDanbamitaleResponseToResponseWithRrn(
+                                transResponse,
+                                remark,
+                                rrn
+                            )
+                        )
                     }
             }
     }
@@ -814,5 +844,29 @@ object NewNibssApiWrapper {
                 )
         )
         disposable.clear()
+    }
+
+    fun getDateObject(dateInString: String): LocalDateTime? =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val pattern = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss a", Locale.ENGLISH)
+            LocalDateTime.parse(dateInString, pattern)
+        } else {
+            Timber.d("VERSION_OF_ANDROID=====>${Build.VERSION.SDK_INT}")
+            null
+        }
+
+    /**
+     * @param dateInSting: String, (dateString from the payload received back from transaction processing),
+     * @param format: String, format in which you want to get the date string back, e.g "yyyy-MM-dd'T'HH:MM:SS.T00Z"
+     * @return date as a string in the specified format
+     * */
+    fun formatDate(dateInString: String, format: String): String? {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val pattern = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss a", Locale.ENGLISH)
+            LocalDateTime.parse(dateInString, pattern).format(pattern)
+        } else {
+            Timber.d("VERSION_OF_ANDROID=====>${Build.VERSION.SDK_INT}")
+            null
+        }
     }
 }

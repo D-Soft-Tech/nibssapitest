@@ -48,7 +48,7 @@ class TransactionProcessor(private val hostConfig: HostConfig) {
             val sequenceNumber = timeMgr.time
             val timeLocalTransaction = timeMgr.time
             val dateLocalTransaction = timeMgr.shortDate
-            val RRN = timeMgr.fullDate.substring(2, 14)
+            val RRN = requestData.RRN ?: timeMgr.fullDate.substring(2, 14)
 
             val processingCode =
                 "${requestData.transactionType.code}${requestData.accountType.code}${IsoAccountType.DEFAULT_UNSPECIFIED.code}"

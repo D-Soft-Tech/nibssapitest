@@ -1,8 +1,8 @@
 package ng.com.netpos.nibssapitest
 
 import android.os.Bundle
-import android.util.Log
 import android.view.View
+import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.danbamitale.epmslib.entities.CardData
@@ -29,19 +29,21 @@ import timber.log.Timber
 class MainActivity : AppCompatActivity() {
     private val compositeDisposable: CompositeDisposable = CompositeDisposable()
     var newNibssApiWrapper: NewNibssApiWrapper = NewNibssApiWrapper
+    private lateinit var editAmount: EditText
     private lateinit var userData: UserData
     private lateinit var cardResult: CardReadResult
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+        editAmount = findViewById(R.id.editTextNumber)
         userData = UserData(
-            "Netplus",
-            "DigiAsteriks",
-            "5de231d9-1be0-4c31-8658-6e15892f2b83",
-            "2044EZVH",
-            NetPosSdk.getDeviceSerial(), // "1142016190000471",
-            "Marwa",
-            "Doyin"
+            businessName = "Netplus",
+            partnerName = "Netplus",
+            partnerId = "5de231d9-1be0-4c31-8658-6e15892f2b83",
+            terminalId = "2033ALZP",
+            terminalSerialNumber = NetPosSdk.getDeviceSerial(),
+            businessAddress = "Marwa Lagos",
+            customerName = "Test Account"
         )
 
         newNibssApiWrapper.logUser(this, Gson().toJson(userData))
@@ -127,7 +129,7 @@ class MainActivity : AppCompatActivity() {
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe { t1, t2 ->
                     t1?.let {
-                        Log.d("RESPONSE", it.toString())
+                        Timber.d("RESPONSE====>%s", it.toString())
                     }
                 }
         )
@@ -186,10 +188,10 @@ class MainActivity : AppCompatActivity() {
                         val makePaymentParams =
                             card?.let { cardData ->
                                 MakePaymentParams(
-                                    amount = 207,
+                                    amount = editAmount.text.toString().toInt().times(100L),
                                     terminalId = userData.terminalId,
                                     cardData = cardData,
-                                    accountType = IsoAccountType.CURRENT
+                                    accountType = IsoAccountType.SAVINGS
                                 )
                             }
                         cardResult.cardScheme?.let { it1 ->
@@ -203,7 +205,7 @@ class MainActivity : AppCompatActivity() {
                                     "TestingAgain"
                                 ).subscribeOn(Schedulers.io())
                                     .doOnError { error ->
-                                        Log.d("ERROR_THAT_HAPPENED===>", Gson().toJson(error))
+                                        Timber.d("ERROR_THAT_HAPPENED===>%s", Gson().toJson(error))
                                     }
                                     .observeOn(AndroidSchedulers.mainThread())
                                     .subscribe(
@@ -214,6 +216,16 @@ class MainActivity : AppCompatActivity() {
                                                 Toast.LENGTH_LONG
                                             ).show()
                                             Timber.d("DATA==>${Gson().toJson(transactionWithRemark)}")
+                                            if (transactionWithRemark != null) {
+                                                Timber.d(
+                                                    "TIME===>%s",
+                                                    Gson().toJson(
+                                                        NewNibssApiWrapper.getDateObject(
+                                                            transactionWithRemark.transmissionDateTime
+                                                        )
+                                                    )
+                                                )
+                                            }
                                         },
                                         { throwable ->
                                             Timber.d("ERROR==>${throwable.localizedMessage}")
