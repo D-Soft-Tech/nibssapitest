@@ -37,6 +37,8 @@ import com.netpluspay.nibssclient.util.Constants.PREF_CONFIG_DATA
 import com.netpluspay.nibssclient.util.Constants.PREF_KEYHOLDER
 import com.netpluspay.nibssclient.util.RandomNumUtil.generateRandomRrn
 import com.netpluspay.nibssclient.util.RandomNumUtil.mapDanbamitaleResponseToResponseWithRrn
+import com.netpluspay.nibssclient.util.ResponseCodeWarrantingForReversalConstants.doesResponseCodeWarrantsReversal
+import com.netpluspay.nibssclient.util.ResponseCodeWarrantingForReversalConstants.wasTransactionCompletedPartially
 import com.netpluspay.nibssclient.util.SharedPrefManager
 import com.netpluspay.nibssclient.util.SharedPrefManager.getUserData
 import com.netpluspay.nibssclient.util.Singletons
@@ -360,11 +362,20 @@ object NewNibssApiWrapper {
                             MessageReasonCode.Timeout
                         )
                     }
-                    .flatMap { transRes ->
-                        if (isConnectionError(transRes.responseMessage)) {
-                            processor.rollback(context, MessageReasonCode.Timeout)
-                        } else {
-                            Single.just(transRes)
+                    .flatMap labelCheckForReversal@{ transRes ->
+                        return@labelCheckForReversal when {
+                            isConnectionError(transRes.responseMessage) ->
+                                processor.rollback(context, MessageReasonCode.Timeout)
+                            wasTransactionCompletedPartially(transRes.responseCode) -> processor.rollback(
+                                context,
+                                MessageReasonCode.CompletedPartially
+                            )
+                            doesResponseCodeWarrantsReversal(transRes.responseCode) -> processor.rollback(
+                                context,
+                                MessageReasonCode.UnSpecified
+                            )
+                            else ->
+                                Single.just(transRes)
                         }
                     }
                     .flatMap { transResponse ->
@@ -689,136 +700,6 @@ object NewNibssApiWrapper {
         }
     }
 
-    private fun makePaymentViaNibssA(
-        context: Context,
-        inputTransactionType: String? = null,
-        terminalId: String? = "",
-        makePaymentParams: String,
-        cardScheme: String,
-        cardHolder: String,
-        remark: String,
-        transactionTrackingTableDao: TransactionTrackingTableDao,
-        rrn: String?
-    ): Single<TransactionWithRemark?> {
-        val transactionType =
-            inputTransactionType?.let { TransactionType.valueOf(it) } ?: TransactionType.PURCHASE
-        val params = gson.fromJson(makePaymentParams, MakePaymentParams::class.java)
-        validateField(params.amount)
-        val configData: ConfigData = Singletons.getConfigData() ?: kotlin.run {
-            showToast(
-                "Terminal has not been configured, restart the application to configure",
-                context
-            )
-            return Single.just(null)
-        }
-        val keyHolder: KeyHolder =
-            getKeyHolder() ?: kotlin.run {
-                showToast(
-                    "Terminal has not been configured, restart the application to configure",
-                    context
-                )
-                return Single.just(null)
-            }
-
-        val hostConfig = HostConfig(
-            if (terminalId.isNullOrEmpty()) getUserData().terminalId else terminalId,
-            connectionData,
-            keyHolder,
-            configData
-        )
-
-        // IsoAccountType.
-        this.amountLong = amountDbl.toLong()
-        val requestData =
-            TransactionRequestData(
-                transactionType,
-                amountLong,
-                0L,
-                accountType = IsoAccountType.parseStringAccountType(params.accountType.name),
-                RRN = rrn
-            )
-
-        val transactionToLog = params.getTransactionResponseToLog(cardScheme, requestData, rrn)
-
-        val processor = TransactionProcessor(hostConfig)
-
-        // Send to backend first
-        return logTransactionToBackEndBeforeMakingPayment(transactionToLog)
-            .subscribeOn(Schedulers.io())
-            .flatMap Foo@{
-                processor.processTransaction(context, requestData, params.cardData)
-                    .onErrorResumeNext { processor.rollback(context, MessageReasonCode.Timeout) }
-                    .flatMap {
-                        transResp = it
-                        if (it.responseCode == "A3") {
-                            Prefs.remove(PREF_CONFIG_DATA)
-                            Prefs.remove(PREF_KEYHOLDER)
-                            configureTerminal(context)
-                        }
-
-                        it.cardHolder = cardHolder
-                        it.cardLabel = cardScheme
-                        it.amount = requestData.amount
-                        lastTransactionResponse.postValue(
-                            rrn?.let { it1 -> it.copy(RRN = it1) }
-                                ?: it
-                        )
-                        val message =
-                            (if (it.responseCode == "00") "Transaction Approved" else "Transaction Not approved")
-                        Timber.d("RESPONSE=>$it")
-                        showToast(message, context)
-                        transactionResponseDao
-                            .insertNewTransaction(it)
-                        Single.just(it)
-                    }.flatMap {
-                        val resp = lastTransactionResponse.value!!
-                        if (resp.responseCode == "00") {
-                            updateTransactionInBackendAfterMakingPaymentA(
-                                transactionToLog.transactionResponse.rrn,
-                                mapDanbamitaleResponseToResponseWithRrn(resp, remark, rrn),
-                                "APPROVED",
-                                transactionTrackingTableDao
-                            ).subscribeOn(Schedulers.io())
-                                .zipWith(
-                                    Single.just(
-                                        mapDanbamitaleResponseToResponseWithRrn(
-                                            lastTransactionResponse.value!!,
-                                            remark,
-                                            rrn
-                                        )
-                                    )
-                                ) { _: LogToBackendResponse,
-                                    secondResponse: TransactionWithRemark ->
-                                    secondResponse
-                                }
-                        } else {
-                            updateTransactionInBackendAfterMakingPaymentA(
-                                rrn = transactionToLog.transactionResponse.rrn,
-                                transactionResponse = mapDanbamitaleResponseToResponseWithRrn(
-                                    resp,
-                                    remark = remark,
-                                    rrn
-                                ),
-                                status = resp.responseMessage,
-                                transactionTrackingTableDao
-                            ).subscribeOn(Schedulers.io())
-                                .zipWith(
-                                    Single.just(
-                                        mapDanbamitaleResponseToResponseWithRrn(
-                                            lastTransactionResponse.value!!,
-                                            remark,
-                                            rrn
-                                        )
-                                    )
-                                ) { _: LogToBackendResponse,
-                                    secondResponse: TransactionWithRemark ->
-                                    secondResponse
-                                }
-                        }
-                    }
-            }
-    }
-
     private fun processTransactionViaInterSwitchMakePayment(
         context: Context,
         inputTransactionType: String? = null,
@@ -909,6 +790,22 @@ object NewNibssApiWrapper {
         logTransactionToBackEndBeforeMakingPayment(transactionToLog)
         return params.cardData.let { cardData ->
             iswPaymentProcessorObject!!.processIswTransaction(cardData)
+                .flatMap labelCheckForReversal@{ transRes ->
+                    return@labelCheckForReversal when {
+                        isConnectionError(transRes.responseMessage) ->
+                            iswPaymentProcessorObject!!.rollback(context, MessageReasonCode.Timeout)
+                        wasTransactionCompletedPartially(transRes.responseCode) -> iswPaymentProcessorObject!!.rollback(
+                            context,
+                            MessageReasonCode.CompletedPartially
+                        )
+                        doesResponseCodeWarrantsReversal(transRes.responseCode) -> iswPaymentProcessorObject!!.rollback(
+                            context,
+                            MessageReasonCode.UnSpecified
+                        )
+                        else ->
+                            Single.just(transRes)
+                    }
+                }
                 .flatMap {
                     transResp = it
                     if (it.responseCode == "A3") {
@@ -953,48 +850,4 @@ object NewNibssApiWrapper {
                 }
         }
     }
-
-    /*
-    if (lastTransactionResponse.value!!.responseCode == "00") {
-                            updateTransactionInBackendAfterMakingPaymentA(
-                                transactionToLog.transactionResponse.rrn,
-                                mapDanbamitaleResponseToResponseWithRrn(
-                                    lastTransactionResponse.value!!,
-                                    remark,
-                                    rrn
-                                ),
-                                "APPROVED",
-                                transactionTrackingTableDao
-                            ).subscribeOn(Schedulers.io())
-                                .observeOn(AndroidSchedulers.mainThread())
-                                .subscribe { t1, t2 ->
-                                    t1?.let { resp ->
-                                        Timber.d("$resp")
-                                    }
-                                    t2?.let { error ->
-                                        Timber.d(error.localizedMessage)
-                                    }
-                                }.disposeWith(compositeDisposable)
-                        } else {
-                            updateTransactionInBackendAfterMakingPaymentA(
-                                rrn = transactionToLog.transactionResponse.rrn,
-                                transactionResponse = mapDanbamitaleResponseToResponseWithRrn(
-                                    lastTransactionResponse.value!!,
-                                    remark = remark,
-                                    rrn
-                                ),
-                                status = lastTransactionResponse.value!!.responseMessage,
-                                transactionTrackingTableDao
-                            ).subscribeOn(Schedulers.io())
-                                .observeOn(AndroidSchedulers.mainThread())
-                                .subscribe { t1, t2 ->
-                                    t1?.let { resp ->
-                                        Timber.d("$resp")
-                                    }
-                                    t2?.let { error ->
-                                        Timber.d("${error.localizedMessage}")
-                                    }
-                                }.disposeWith(compositeDisposable)
-                        }
-    * */
 }
