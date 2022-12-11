@@ -61,7 +61,7 @@ class RepushFailedTransactionToBackendWorker(
                 t1?.let {
                     Timber.d("GOT_HERE_A")
                     if (it.code() in 200..299 || it.code() == 409 || it.message()
-                        .contains("There is an error") || it.code() == 404 || it.code() == 500
+                        .contains("There is an error")
                     ) {
                         Timber.d("CONDITION_FULFILLED")
                         transactionTrackingTableDao.deleteTransactionAfterSuccessfulUpdateAtBackend(

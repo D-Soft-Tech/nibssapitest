@@ -50,7 +50,6 @@ object IsoAdapter {
 
     @Throws(Exception::class, UnsupportedEncodingException::class)
     fun prepareByteStream(isoMessage: IsoMessage): ByteArray {
-
         val isoStream = isoMessage.writeData()
 
         return prepareByteStream(isoStream)

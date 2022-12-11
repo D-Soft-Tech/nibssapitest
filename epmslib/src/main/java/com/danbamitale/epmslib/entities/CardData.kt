@@ -55,7 +55,6 @@ data class CardData(
         }
 
         fun initCardDataFromTrack(fullIcc: String): CardData {
-
             val tlvList = TLVList.fromBinary(fullIcc)
             val nibssIcc = StringBuilder()
             for (tag in NIBSS_TAGS) {

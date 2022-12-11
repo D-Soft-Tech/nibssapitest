@@ -7,8 +7,11 @@ import android.text.format.DateUtils
 import android.widget.Toast
 import androidx.lifecycle.MutableLiveData
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
-import androidx.work.* // ktlint-disable no-wildcard-imports
-import com.danbamitale.epmslib.entities.* // ktlint-disable no-wildcard-imports
+import androidx.work.Constraints
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import com.danbamitale.epmslib.entities.*
 import com.danbamitale.epmslib.entities.KeyHolder
 import com.danbamitale.epmslib.entities.OriginalDataElements
 import com.danbamitale.epmslib.entities.TransactionResponse
@@ -26,11 +29,10 @@ import com.netpluspay.nibssclient.R
 import com.netpluspay.nibssclient.dao.TransactionResponseDao
 import com.netpluspay.nibssclient.dao.TransactionTrackingTableDao
 import com.netpluspay.nibssclient.database.AppDatabase
-import com.netpluspay.nibssclient.models.* // ktlint-disable no-wildcard-imports
+import com.netpluspay.nibssclient.models.*
 import com.netpluspay.nibssclient.network.RrnApiService
 import com.netpluspay.nibssclient.network.StormApiClient
 import com.netpluspay.nibssclient.network.StormApiService
-import com.netpluspay.nibssclient.util.ConnectionErrorConstants.isConnectionError
 import com.netpluspay.nibssclient.util.Constants.ISW_TOKEN
 import com.netpluspay.nibssclient.util.Constants.LAST_POS_CONFIGURATION_TIME
 import com.netpluspay.nibssclient.util.Constants.PREF_CONFIG_DATA
@@ -60,13 +62,12 @@ import timber.log.Timber
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.*
-import java.util.concurrent.TimeUnit
 
 private const val CONFIGURATION_STATUS = "terminal_configuration_status"
 private const val CONFIGURATION_ACTION = "com.woleapp.netpos.TERMINAL_CONFIGURATION"
 private const val DEFAULT_TERMINAL_ID = "2057H63U"
 
-object NewNibssApiWrapper {
+object NewNibssApiWrapper2 {
     private lateinit var transactionResponseDao: TransactionResponseDao
     private lateinit var workManager: WorkManager
     private val gson = Gson()
@@ -83,9 +84,7 @@ object NewNibssApiWrapper {
         ipPort = configurationData.port.toInt(),
         isSSL = true
     )
-    private val lastTransactionResponse = MutableLiveData<TransactionResponse>()
-    private val lastMakePaymentParam = MutableLiveData<String>()
-    private val lastTransactionRemark = MutableLiveData<String>()
+    private val lastTransactionResponse = MutableLiveData<TransactionResponse?>()
     private var _partnerThreshold: MutableLiveData<GetPartnerInterSwitchThresholdResponse> =
         MutableLiveData()
     private var terminalId: String? = null
@@ -226,15 +225,13 @@ object NewNibssApiWrapper {
     }
 
     private fun repushTransactionsToBackend() {
-        val workRequest = PeriodicWorkRequestBuilder<RepushFailedTransactionToBackendWorker>(
-            15,
-            TimeUnit.MINUTES
-        ).setConstraints(
-            Constraints.Builder()
-                .setRequiredNetworkType(
-                    NetworkType.CONNECTED
-                ).build()
-        ).build()
+        val workRequest = OneTimeWorkRequestBuilder<RepushFailedTransactionToBackendWorker>()
+            .setConstraints(
+                Constraints.Builder()
+                    .setRequiredNetworkType(
+                        NetworkType.CONNECTED
+                    ).build()
+            ).build()
         workManager.enqueue(workRequest)
     }
 
@@ -247,9 +244,7 @@ object NewNibssApiWrapper {
         remark: String
     ): Single<TransactionWithRemark?> {
         // some comments here
-        lastMakePaymentParam.postValue(makePaymentParams)
         transactionResponseDao = AppDatabase.getDatabaseInstance(context).transactionResponseDao()
-        lastTransactionRemark.postValue(remark)
         val transactionTrackingTableDao =
             AppDatabase.getDatabaseInstance(context).transactionTrackingTableDao()
         val params = gson.fromJson(makePaymentParams, MakePaymentParams::class.java)
@@ -278,415 +273,6 @@ object NewNibssApiWrapper {
                     it.body()
                 )
             }
-    }
-
-    // Make Payment Via Nibss Correct Implementation
-    private fun makePaymentViaNibss(
-        context: Context,
-        inputTransactionType: String? = null,
-        terminalId: String? = "",
-        makePaymentParams: String,
-        cardScheme: String,
-        cardHolder: String,
-        remark: String,
-        transactionTrackingTableDao: TransactionTrackingTableDao,
-        rrn: String?
-    ): Single<TransactionWithRemark?> {
-        val transactionType =
-            inputTransactionType?.let { TransactionType.valueOf(it) } ?: TransactionType.PURCHASE
-        val params = gson.fromJson(makePaymentParams, MakePaymentParams::class.java)
-        validateField(params.amount)
-        val configData: ConfigData = Singletons.getConfigData() ?: kotlin.run {
-            showToast(
-                "Terminal has not been configured, restart the application to configure",
-                context
-            )
-            return Single.just(null)
-        }
-        val keyHolder: KeyHolder =
-            getKeyHolder() ?: kotlin.run {
-                showToast(
-                    "Terminal has not been configured, restart the application to configure",
-                    context
-                )
-                return Single.just(null)
-            }
-
-        val hostConfig = HostConfig(
-            if (terminalId.isNullOrEmpty()) getUserData().terminalId else terminalId,
-            connectionData,
-            keyHolder,
-            configData
-        )
-
-        // IsoAccountType.
-        this.amountLong = amountDbl.toLong()
-        val originalDataElements =
-            OriginalDataElements(
-                originalTransactionType = transactionType,
-                originalRRN = rrn?.takeLast(12) ?: ""
-            )
-        val requestData =
-            TransactionRequestData(
-                transactionType,
-                amountLong,
-                0L,
-                accountType = IsoAccountType.parseStringAccountType(params.accountType.name),
-                RRN = rrn?.takeLast(12),
-                originalDataElements = originalDataElements
-            )
-
-        val transactionToLog = params.getTransactionResponseToLog(cardScheme, requestData, rrn)
-
-        val processor = TransactionProcessor(hostConfig)
-
-        // Send to backend first
-        return logTransactionToBackEndBeforeMakingPayment(transactionToLog)
-            .doOnError {
-                Toast.makeText(
-                    context,
-                    "An error occured, please try again later",
-                    Toast.LENGTH_LONG
-                ).show()
-                Timber.d("ERROR_FROM_FIRST_LOGGING_TO_SERVER=====>%s", it.localizedMessage)
-                return@doOnError
-            }
-            .flatMap {
-                Timber.d("SUCCESSFULLY_LOGGED_TO_BACKEND=====>%s", gson.toJson(it))
-                processor.processTransaction(context, requestData, params.cardData)
-                    .onErrorResumeNext {
-                        processor.rollback(
-                            context,
-                            MessageReasonCode.Timeout
-                        )
-                    }
-                    .flatMap { transRes ->
-                        if (isConnectionError(transRes.responseMessage)) {
-                            processor.rollback(context, MessageReasonCode.Timeout)
-                        } else {
-                            Single.just(transRes)
-                        }
-                    }
-                    .flatMap { transResponse ->
-                        updateTransactionInBackendAfterMakingPayment(
-                            transResponse.RRN,
-                            mapTransactionResponseToTransactionWithRemark(transResponse),
-                            if (transResponse.responseCode == "00") "APPROVED" else transResponse.responseMessage,
-                            transactionTrackingTableDao
-                        )
-                        Timber.d(
-                            "PAYMENT_DONE_SUCCESSFULLY=====>%s",
-                            gson.toJson(transResponse)
-                        )
-                        transResp = transResponse
-                        if (transResponse.responseCode == "A3") {
-                            Prefs.remove(PREF_CONFIG_DATA)
-                            Prefs.remove(PREF_KEYHOLDER)
-                            configureTerminal(context)
-                                .subscribeOn(Schedulers.io())
-                                .observeOn(AndroidSchedulers.mainThread())
-                                .subscribe { data, _ ->
-                                    data?.let { configResult ->
-                                        Prefs.putString(
-                                            PREF_KEYHOLDER,
-                                            gson.toJson(configResult.first)
-                                        )
-                                        Prefs.putString(
-                                            PREF_CONFIG_DATA,
-                                            gson.toJson(configResult.second)
-                                        )
-                                    }
-                                }.disposeWith(compositeDisposable)
-                        }
-
-                        transResponse.cardHolder = cardHolder
-                        transResponse.cardLabel = cardScheme
-                        transResponse.amount = requestData.amount
-                        lastTransactionResponse.postValue(
-                            rrn?.let { transResponse1 -> transResponse.copy(RRN = transResponse1) }
-                                ?: transResponse
-                        )
-                        val message =
-                            (if (transResponse.responseCode == "00") "Transaction Approved" else "Transaction Not approved")
-                        Timber.d("RESPONSE=>$transResponse")
-                        showToast(message, context)
-                        transactionResponseDao
-                            .insertNewTransaction(transResponse)
-                        Single.just(
-                            mapDanbamitaleResponseToResponseWithRrn(
-                                transResponse,
-                                remark,
-                                rrn
-                            )
-                        )
-                    }
-            }
-    }
-
-    /**
-     * @param context: Context
-     * @param rrnOfTheTransaction: String (rrn of the transaction you want to trigger reversal for)
-     * @param terminalId: String? (tid of your device), this can be null
-     * @param schemeOfTheCardUsedForTheTransaction: String (cardScheme of the card used to initiate this transaction, e.g Visa, MasterCard or Verve)
-     * @param makePaymentParamsOfTheTransaction: String, stringified makePaymentParameter of the transaction you want to trigger reversal for
-     * @return Single<TransactionWithRemark?>
-     * */
-    fun triggerReversalForLastTransaction(
-        context: Context,
-        rrnOfTheTransaction: String,
-        terminalId: String?,
-        schemeOfTheCardUsedForTheTransaction: String,
-        makePaymentParamsOfTheTransaction: String
-    ): Single<TransactionWithRemark?> {
-        val transactionTrackingTableDao =
-            AppDatabase.getDatabaseInstance(context).transactionTrackingTableDao()
-
-        val transactionType = TransactionType.REVERSAL
-        val params = gson.fromJson(
-            if (makePaymentParamsOfTheTransaction.isNotEmpty()) makePaymentParamsOfTheTransaction else lastMakePaymentParam.value,
-            MakePaymentParams::class.java
-        )
-        validateField(params.amount)
-        val configData: ConfigData = Singletons.getConfigData() ?: kotlin.run {
-            showToast(
-                "Terminal has not been configured, restart the application to configure",
-                context
-            )
-            return Single.just(null)
-        }
-        val keyHolder: KeyHolder =
-            getKeyHolder() ?: kotlin.run {
-                showToast(
-                    "Terminal has not been configured, restart the application to configure",
-                    context
-                )
-                return Single.just(null)
-            }
-
-        val hostConfig = HostConfig(
-            if (terminalId.isNullOrEmpty()) getUserData().terminalId else terminalId,
-            connectionData,
-            keyHolder,
-            configData
-        )
-
-        // IsoAccountType.
-        this.amountLong = amountDbl.toLong()
-        val originalDataElements =
-            OriginalDataElements(
-                originalTransactionType = transactionType,
-                originalRRN = rrnOfTheTransaction
-            )
-        val requestData =
-            TransactionRequestData(
-                transactionType,
-                amountLong,
-                0L,
-                accountType = IsoAccountType.parseStringAccountType(params.accountType.name),
-                RRN = rrnOfTheTransaction,
-                originalDataElements = originalDataElements
-            )
-
-        val processor = TransactionProcessor(hostConfig)
-
-        return processor.rollback(context, MessageReasonCode.CustomerCancellation)
-            .flatMap {
-                val transRes = mapDanbamitaleResponseToResponseWithRrn(
-                    it,
-                    lastTransactionRemark.value!!,
-                    rrnOfTheTransaction
-                )
-                updateTransactionInBackendAfterMakingPayment(
-                    rrnOfTheTransaction,
-                    transRes,
-                    "REVERSED",
-                    transactionTrackingTableDao
-                )
-                Single.just(it)
-            }
-            .flatMap {
-                Single.just(
-                    mapDanbamitaleResponseToResponseWithRrn(
-                        it,
-                        lastTransactionRemark.value!!,
-                        rrnOfTheTransaction
-                    )
-                )
-            }
-    }
-
-    private fun logTransactionToBackEndBeforeMakingPayment(dataToLog: TransactionToLogBeforeConnectingToNibbs): Single<ResponseBodyAfterLoginToBackend> {
-        return stormApiService.logTransactionBeforeMakingPayment(dataToLog)
-    }
-
-    private fun updateTransactionInBackendAfterMakingPayment(
-        rrn: String,
-        transactionResponse: TransactionWithRemark,
-        status: String,
-        transactionTrackingTableDao: TransactionTrackingTableDao
-    ) {
-        val dataToLog = DataToLogAfterConnectingToNibss(status, transactionResponse, rrn)
-        compositeDisposable.add(
-            stormApiService.updateLogAfterConnectingToNibss2(rrn, dataToLog)
-                .subscribeOn(Schedulers.io())
-                .doOnError {
-                    saveTransactionForTracking(
-                        ModelObjects.TransactionResponseXForTracking(
-                            dataToLog.rrn,
-                            mapToTransactionResponseX(mapToTransactionResponse(dataToLog.transactionResponse)),
-                            dataToLog.status
-                        ),
-                        transactionTrackingTableDao
-                    )
-                    Timber.d("ERROR_SAVING_TRANS_FOR_TRACKING==>${it.localizedMessage}")
-                }
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe { data, error ->
-                    data?.let {
-                        if (it.message()
-                            .contains("There is an error") || it.code() == 404 || it.code() == 500 || it.code() in 400..500
-                        ) {
-                            saveTransactionForTracking(
-                                ModelObjects.TransactionResponseXForTracking(
-                                    dataToLog.rrn,
-                                    mapToTransactionResponseX(mapToTransactionResponse(dataToLog.transactionResponse)),
-                                    dataToLog.status
-                                ),
-                                transactionTrackingTableDao
-                            )
-                        }
-                    }
-                    error?.let {
-                    }
-                }
-        )
-        disposeDisposables()
-    }
-
-    private fun updateTransactionInBackendAfterMakingPaymentA(
-        rrn: String,
-        transactionResponse: TransactionWithRemark,
-        status: String,
-        transactionTrackingTableDao: TransactionTrackingTableDao
-    ): Single<LogToBackendResponse> {
-        val dataToLog = DataToLogAfterConnectingToNibss(status, transactionResponse, rrn)
-        return stormApiService.updateLogAfterConnectingToNibss(rrn, dataToLog)
-            .subscribeOn(Schedulers.io())
-            .doOnError {
-                saveTransactionForTracking(
-                    ModelObjects.TransactionResponseXForTracking(
-                        dataToLog.rrn,
-                        mapToTransactionResponseX(mapToTransactionResponse(dataToLog.transactionResponse)),
-                        dataToLog.status
-                    ),
-                    transactionTrackingTableDao
-                )
-                Timber.d("ERROR_UPDATING_TRANS==>${it.localizedMessage}")
-            }
-            .onErrorResumeNext(Single.just(LogToBackendResponse(listOf(1), "", "failed")))
-    }
-
-    private fun saveTransactionForTracking(
-        transactionResponse: ModelObjects.TransactionResponseXForTracking,
-        transactionTrackingTableDao: TransactionTrackingTableDao
-    ) {
-        transactionTrackingTableDao.insertTransactionForTracking(transactionResponse)
-            .subscribeOn(Schedulers.io())
-            .observeOn(AndroidSchedulers.mainThread())
-            .subscribe { t1, t2 ->
-                t1?.let {
-                    Timber.d("SUCCESS_SAVING_FOR_TRACKING=====>%s", it.toString())
-                }
-                t2?.let {
-                    Timber.d("ERROR_SAVING_FOR_TRACKING=====>%s", it.localizedMessage)
-                }
-            }.disposeWith(compositeDisposable)
-        disposeDisposables()
-    }
-
-    private fun getIswToken(context: Context): String {
-        Timber.d("CALLED")
-        val req = TokenPassportRequest(context.getString(R.string.userMD), getUserData().terminalId)
-        return try {
-            var iswToken = ""
-            val disposable = CompositeDisposable()
-            disposable.add(
-                getTokenClient.getToken(req)
-                    .doOnError {
-                        Timber.d("TOKEN_ERROR==>${it.localizedMessage}")
-                    }
-                    .subscribeOn(Schedulers.io())
-                    .observeOn(AndroidSchedulers.mainThread())
-                    .subscribe { t1, t2 ->
-                        t1?.let {
-                            Timber.d("TOKEN_RESPONSE==>${it.token}")
-                            Prefs.putString(ISW_TOKEN, it.token)
-                            iswToken = it.token
-                        }
-                        t2?.let {
-                        }
-                    }
-            )
-            disposable.clear()
-            iswToken
-        } catch (e: Exception) {
-            "RUBISH"
-        }
-    }
-
-    private fun getRRn() =
-        rrnApiService.getRrn()
-
-    // GET THRESHOLD AMOUNT TO ROUTE USER'S TRANSACTION TO ISW
-    private fun getThreshold() {
-        val disposable = CompositeDisposable()
-        disposable.add(
-            stormApiService.getPartnerInterSwitchThreshold(
-                getUserData().partnerId
-            )
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(
-                    { data ->
-                        // Save the threshold to sharedPrefs
-                        Timber.d("ISW_THRESHOLD==>${Gson().toJson(data)}")
-                        val thresholdObjectInString = gson.toJson(data)
-                        Prefs.putString(
-                            getUserData().partnerId + "iswThreshold",
-                            thresholdObjectInString
-                        )
-                        _partnerThreshold.postValue(data)
-                    },
-                    { throwable ->
-                        Timber.e(throwable)
-                    }
-                )
-        )
-        disposable.clear()
-    }
-
-    fun getDateObject(dateInString: String): LocalDateTime? =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val pattern = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss a", Locale.ENGLISH)
-            LocalDateTime.parse(dateInString, pattern)
-        } else {
-            Timber.d("VERSION_OF_ANDROID=====>${Build.VERSION.SDK_INT}")
-            null
-        }
-
-    /**
-     * @param dateInSting: String, (dateString from the payload received back from transaction processing),
-     * @param format: String, format in which you want to get the date string back, e.g "yyyy-MM-dd'T'HH:MM:SS.T00Z"
-     * @return String, date as a string in the specified format
-     * */
-    fun formatDate(dateInString: String, format: String): String? {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val pattern = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss a", Locale.ENGLISH)
-            LocalDateTime.parse(dateInString, pattern).format(pattern)
-        } else {
-            Timber.d("VERSION_OF_ANDROID=====>${Build.VERSION.SDK_INT}")
-            null
-        }
     }
 
     private fun makePaymentViaNibssA(
@@ -817,6 +403,294 @@ object NewNibssApiWrapper {
                         }
                     }
             }
+    }
+
+    // Make Payment Via Nibss Correct Implementation
+    private fun makePaymentViaNibss(
+        context: Context,
+        inputTransactionType: String? = null,
+        terminalId: String? = "",
+        makePaymentParams: String,
+        cardScheme: String,
+        cardHolder: String,
+        remark: String,
+        transactionTrackingTableDao: TransactionTrackingTableDao,
+        rrn: String?
+    ): Single<TransactionWithRemark?> {
+        val transactionType =
+            inputTransactionType?.let { TransactionType.valueOf(it) } ?: TransactionType.PURCHASE
+        val params = gson.fromJson(makePaymentParams, MakePaymentParams::class.java)
+        validateField(params.amount)
+        val configData: ConfigData = Singletons.getConfigData() ?: kotlin.run {
+            showToast(
+                "Terminal has not been configured, restart the application to configure",
+                context
+            )
+            return Single.just(null)
+        }
+        val keyHolder: KeyHolder =
+            getKeyHolder() ?: kotlin.run {
+                showToast(
+                    "Terminal has not been configured, restart the application to configure",
+                    context
+                )
+                return Single.just(null)
+            }
+
+        val hostConfig = HostConfig(
+            if (terminalId.isNullOrEmpty()) getUserData().terminalId else terminalId,
+            connectionData,
+            keyHolder,
+            configData
+        )
+
+        // IsoAccountType.
+        this.amountLong = amountDbl.toLong()
+        val originalDataElements =
+            OriginalDataElements(
+                originalTransactionType = transactionType,
+                originalRRN = rrn?.takeLast(12) ?: ""
+            )
+        val requestData =
+            TransactionRequestData(
+                transactionType,
+                amountLong,
+                0L,
+                accountType = IsoAccountType.parseStringAccountType(params.accountType.name),
+                RRN = rrn?.takeLast(12),
+                originalDataElements = originalDataElements
+            )
+
+        val transactionToLog = params.getTransactionResponseToLog(cardScheme, requestData, rrn)
+
+        val processor = TransactionProcessor(hostConfig)
+
+        // Send to backend first
+        return logTransactionToBackEndBeforeMakingPayment(transactionToLog)
+            .doOnError {
+                Timber.d("ERROR_FROM_FIRST_LOGGING_TO_SERVER=====>%s", it.localizedMessage)
+                return@doOnError
+            }
+            .flatMap {
+                Timber.d("SUCCESSFULLY_LOGGED_TO_BACKEND=====>%s", gson.toJson(it))
+                processor.processTransaction(context, requestData, params.cardData)
+                    .doFinally {
+                        if (lastTransactionResponse.value != null) {
+                            if (lastTransactionResponse.value!!.responseCode == "00") {
+                                updateTransactionInBackendAfterMakingPaymentA(
+                                    transactionToLog.transactionResponse.rrn,
+                                    mapDanbamitaleResponseToResponseWithRrn(
+                                        lastTransactionResponse.value!!,
+                                        remark,
+                                        rrn
+                                    ),
+                                    "APPROVED",
+                                    transactionTrackingTableDao
+                                ).subscribeOn(Schedulers.io())
+                                    .observeOn(AndroidSchedulers.mainThread())
+                                    .subscribe { t1, t2 ->
+                                        t1?.let { resp ->
+                                            lastTransactionResponse.postValue(null)
+                                            Timber.d("$resp")
+                                        }
+                                        t2?.let { error ->
+                                            Timber.d(error.localizedMessage)
+                                        }
+                                    }.disposeWith(compositeDisposable)
+                            } else {
+                                updateTransactionInBackendAfterMakingPaymentA(
+                                    rrn = transactionToLog.transactionResponse.rrn,
+                                    transactionResponse = mapDanbamitaleResponseToResponseWithRrn(
+                                        lastTransactionResponse.value!!,
+                                        remark = remark,
+                                        rrn
+                                    ),
+                                    status = lastTransactionResponse.value!!.responseMessage,
+                                    transactionTrackingTableDao
+                                ).subscribeOn(Schedulers.io())
+                                    .observeOn(AndroidSchedulers.mainThread())
+                                    .subscribe { t1, t2 ->
+                                        t1?.let { resp ->
+                                            lastTransactionResponse.postValue(null)
+                                            Timber.d("$resp")
+                                        }
+                                        t2?.let { error ->
+                                            Timber.d("${error.localizedMessage}")
+                                        }
+                                    }.disposeWith(compositeDisposable)
+                            }
+                        } else {
+                        }
+                    }
+                    .onErrorResumeNext {
+                        processor.rollback(
+                            context,
+                            MessageReasonCode.Timeout
+                        )
+                    }
+                    .flatMap { transResponse ->
+                        saveTransactionForTracking(
+                            ModelObjects.TransactionResponseXForTracking(
+                                transResponse.RRN,
+                                mapToTransactionResponseX(transResponse),
+                                transResponse.responseMessage
+                            ),
+                            transactionTrackingTableDao
+                        )
+                        Timber.d(
+                            "PAYMENT_DONE_SUCCESSFULLY=====>%s",
+                            gson.toJson(transResponse)
+                        )
+                        transResp = transResponse
+                        if (transResponse.responseCode == "A3") {
+                            Prefs.remove(PREF_CONFIG_DATA)
+                            Prefs.remove(PREF_KEYHOLDER)
+                            configureTerminal(context)
+                                .subscribeOn(Schedulers.io())
+                                .observeOn(AndroidSchedulers.mainThread())
+                                .subscribe { data, _ ->
+                                    data?.let { configResult ->
+//                                        IsoTimeManager.
+                                        Prefs.putString(
+                                            PREF_KEYHOLDER,
+                                            gson.toJson(configResult.first)
+                                        )
+                                        Prefs.putString(
+                                            PREF_CONFIG_DATA,
+                                            gson.toJson(configResult.second)
+                                        )
+                                    }
+                                }.disposeWith(compositeDisposable)
+                        }
+
+                        transResponse.cardHolder = cardHolder
+                        transResponse.cardLabel = cardScheme
+                        transResponse.amount = requestData.amount
+                        lastTransactionResponse.postValue(
+                            rrn?.let { transResponse1 -> transResponse.copy(RRN = transResponse1) }
+                                ?: transResponse
+                        )
+                        val message =
+                            (if (transResponse.responseCode == "00") "Transaction Approved" else "Transaction Not approved")
+                        Timber.d("RESPONSE=>$transResponse")
+                        showToast(message, context)
+                        transactionResponseDao
+                            .insertNewTransaction(transResponse)
+                        Single.just(
+                            mapDanbamitaleResponseToResponseWithRrn(
+                                transResponse,
+                                remark,
+                                rrn
+                            )
+                        )
+                    }
+            }
+    }
+
+    private fun logTransactionToBackEndBeforeMakingPayment(dataToLog: TransactionToLogBeforeConnectingToNibbs): Single<ResponseBodyAfterLoginToBackend> {
+        return stormApiService.logTransactionBeforeMakingPayment(dataToLog)
+    }
+
+    private fun updateTransactionInBackendAfterMakingPayment(
+        rrn: String,
+        transactionResponse: TransactionWithRemark,
+        status: String,
+        transactionTrackingTableDao: TransactionTrackingTableDao
+    ) {
+        val dataToLog = DataToLogAfterConnectingToNibss(status, transactionResponse, rrn)
+        compositeDisposable.add(
+            stormApiService.updateLogAfterConnectingToNibss(rrn, dataToLog)
+                .subscribeOn(Schedulers.io())
+                .doOnError {
+                    saveTransactionForTracking(
+                        ModelObjects.TransactionResponseXForTracking(
+                            dataToLog.rrn,
+                            mapToTransactionResponseX(mapToTransactionResponse(dataToLog.transactionResponse)),
+                            dataToLog.status
+                        ),
+                        transactionTrackingTableDao
+                    )
+                    Timber.d("ERROR_UPDATING_TRANS==>${it.localizedMessage}")
+                }
+                .onErrorResumeNext(Single.just(LogToBackendResponse(listOf(1), "", "failed")))
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe { data, error ->
+                    data?.let {
+                    }
+                    error?.let {
+                    }
+                }
+        )
+    }
+
+    private fun updateTransactionInBackendAfterMakingPaymentA(
+        rrn: String,
+        transactionResponse: TransactionWithRemark,
+        status: String,
+        transactionTrackingTableDao: TransactionTrackingTableDao
+    ): Single<LogToBackendResponse> {
+        val dataToLog = DataToLogAfterConnectingToNibss(status, transactionResponse, rrn)
+        return stormApiService.updateLogAfterConnectingToNibss(rrn, dataToLog)
+            .subscribeOn(Schedulers.io())
+            .doOnError {
+                saveTransactionForTracking(
+                    ModelObjects.TransactionResponseXForTracking(
+                        dataToLog.rrn,
+                        mapToTransactionResponseX(mapToTransactionResponse(dataToLog.transactionResponse)),
+                        dataToLog.status
+                    ),
+                    transactionTrackingTableDao
+                )
+                Timber.d("ERROR_UPDATING_TRANS==>${it.localizedMessage}")
+            }
+            .onErrorResumeNext(Single.just(LogToBackendResponse(listOf(1), "", "failed")))
+    }
+
+    private fun saveTransactionForTracking(
+        transactionResponse: ModelObjects.TransactionResponseXForTracking,
+        transactionTrackingTableDao: TransactionTrackingTableDao
+    ) {
+        transactionTrackingTableDao.insertTransactionForTracking(transactionResponse)
+            .subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe { t1, t2 ->
+                t1?.let {
+                    Timber.d("SUCCESS_SAVING_FOR_TRACKING=====>%s", it.toString())
+                }
+                t2?.let {
+                    Timber.d("ERROR_SAVING_FOR_TRACKING=====>%s", it.localizedMessage)
+                }
+            }.disposeWith(compositeDisposable)
+    }
+
+    private fun getIswToken(context: Context): String {
+        Timber.d("CALLED")
+        val req = TokenPassportRequest(context.getString(R.string.userMD), getUserData().terminalId)
+        return try {
+            var iswToken = ""
+            val disposable = CompositeDisposable()
+            disposable.add(
+                getTokenClient.getToken(req)
+                    .doOnError {
+                        Timber.d("TOKEN_ERROR==>${it.localizedMessage}")
+                    }
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe { t1, t2 ->
+                        t1?.let {
+                            Timber.d("TOKEN_RESPONSE==>${it.token}")
+                            Prefs.putString(ISW_TOKEN, it.token)
+                            iswToken = it.token
+                        }
+                        t2?.let {
+                        }
+                    }
+            )
+            disposable.clear()
+            iswToken
+        } catch (e: Exception) {
+            "RUBISH"
+        }
     }
 
     private fun processTransactionViaInterSwitchMakePayment(
@@ -954,47 +828,58 @@ object NewNibssApiWrapper {
         }
     }
 
-    /*
-    if (lastTransactionResponse.value!!.responseCode == "00") {
-                            updateTransactionInBackendAfterMakingPaymentA(
-                                transactionToLog.transactionResponse.rrn,
-                                mapDanbamitaleResponseToResponseWithRrn(
-                                    lastTransactionResponse.value!!,
-                                    remark,
-                                    rrn
-                                ),
-                                "APPROVED",
-                                transactionTrackingTableDao
-                            ).subscribeOn(Schedulers.io())
-                                .observeOn(AndroidSchedulers.mainThread())
-                                .subscribe { t1, t2 ->
-                                    t1?.let { resp ->
-                                        Timber.d("$resp")
-                                    }
-                                    t2?.let { error ->
-                                        Timber.d(error.localizedMessage)
-                                    }
-                                }.disposeWith(compositeDisposable)
-                        } else {
-                            updateTransactionInBackendAfterMakingPaymentA(
-                                rrn = transactionToLog.transactionResponse.rrn,
-                                transactionResponse = mapDanbamitaleResponseToResponseWithRrn(
-                                    lastTransactionResponse.value!!,
-                                    remark = remark,
-                                    rrn
-                                ),
-                                status = lastTransactionResponse.value!!.responseMessage,
-                                transactionTrackingTableDao
-                            ).subscribeOn(Schedulers.io())
-                                .observeOn(AndroidSchedulers.mainThread())
-                                .subscribe { t1, t2 ->
-                                    t1?.let { resp ->
-                                        Timber.d("$resp")
-                                    }
-                                    t2?.let { error ->
-                                        Timber.d("${error.localizedMessage}")
-                                    }
-                                }.disposeWith(compositeDisposable)
-                        }
-    * */
+    private fun getRRn() =
+        rrnApiService.getRrn()
+
+    // GET THRESHOLD AMOUNT TO ROUTE USER'S TRANSACTION TO ISW
+    private fun getThreshold() {
+        val disposable = CompositeDisposable()
+        disposable.add(
+            stormApiService.getPartnerInterSwitchThreshold(
+                getUserData().partnerId
+            )
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(
+                    { data ->
+                        // Save the threshold to sharedPrefs
+                        Timber.d("ISW_THRESHOLD==>${Gson().toJson(data)}")
+                        val thresholdObjectInString = gson.toJson(data)
+                        Prefs.putString(
+                            getUserData().partnerId + "iswThreshold",
+                            thresholdObjectInString
+                        )
+                        _partnerThreshold.postValue(data)
+                    },
+                    { throwable ->
+                        Timber.e(throwable)
+                    }
+                )
+        )
+        disposable.clear()
+    }
+
+    fun getDateObject(dateInString: String): LocalDateTime? =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val pattern = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss a", Locale.ENGLISH)
+            LocalDateTime.parse(dateInString, pattern)
+        } else {
+            Timber.d("VERSION_OF_ANDROID=====>${Build.VERSION.SDK_INT}")
+            null
+        }
+
+    /**
+     * @param dateInSting: String, (dateString from the payload received back from transaction processing),
+     * @param format: String, format in which you want to get the date string back, e.g "yyyy-MM-dd'T'HH:MM:SS.T00Z"
+     * @return date as a string in the specified format
+     * */
+    fun formatDate(dateInString: String, format: String): String? {
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val pattern = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss a", Locale.ENGLISH)
+            LocalDateTime.parse(dateInString, pattern).format(pattern)
+        } else {
+            Timber.d("VERSION_OF_ANDROID=====>${Build.VERSION.SDK_INT}")
+            null
+        }
+    }
 }

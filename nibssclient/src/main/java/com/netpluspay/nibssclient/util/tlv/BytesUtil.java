@@ -1,12 +1,10 @@
 package com.netpluspay.nibssclient.util.tlv;
 
 
-import com.netpluspay.nibssclient.util.app.NibssClient;
+import static java.nio.charset.StandardCharsets.US_ASCII;
 
 import java.io.UnsupportedEncodingException;
 import java.math.BigInteger;
-
-import static java.nio.charset.StandardCharsets.US_ASCII;
 
 
 public class BytesUtil {
@@ -21,7 +19,7 @@ public class BytesUtil {
         byte[] asc = ascii.getBytes();
         byte[] bcd = new byte[ascii.length() >> 1];
         for (int i = 0; i < bcd.length; i++) {
-            bcd[i] = (byte)(hex2byte((char)asc[2 * i]) << 4 | hex2byte((char)asc[2 * i + 1]));
+            bcd[i] = (byte) (hex2byte((char) asc[2 * i]) << 4 | hex2byte((char) asc[2 * i + 1]));
         }
         return bcd;
     }
@@ -37,22 +35,25 @@ public class BytesUtil {
         }
         return total;
     }
+
     /**
      * @param n:[0,65536]
-     * */
-    public static String intToHexString(int n){
+     */
+    public static String intToHexString(int n) {
         byte[] b = new byte[2];
-        b[0] = (byte) (n/256);
-        b[1] = (byte) (n%256);
-        return String.format("%02X%02X",b[0],b[1]);
+        b[0] = (byte) (n / 256);
+        b[1] = (byte) (n % 256);
+        return String.format("%02X%02X", b[0], b[1]);
     }
-    public static String int3ToHexString(int n){
-        byte[] b = new byte[3];
-        b[0] = (byte) (n/256);
-        b[1] = (byte) (n%256);
 
-        return String.format("%02X%02X",b[0],b[1]);
+    public static String int3ToHexString(int n) {
+        byte[] b = new byte[3];
+        b[0] = (byte) (n / 256);
+        b[1] = (byte) (n % 256);
+
+        return String.format("%02X%02X", b[0], b[1]);
     }
+
     public static String bytes2HexString(byte[] data) {
         if (data == null)
             return "";
@@ -68,17 +69,15 @@ public class BytesUtil {
     }
 
 
-
-
     public static String bcd2Ascii(final byte[] bcd) {
         if (bcd == null)
             return "";
         StringBuilder sb = new StringBuilder(bcd.length << 1);
         for (byte ch : bcd) {
             byte half = (byte) (ch >> 4);
-            sb.append((char)(half + ((half > 9) ? ('A' - 10) : '0')));
+            sb.append((char) (half + ((half > 9) ? ('A' - 10) : '0')));
             half = (byte) (ch & 0x0f);
-            sb.append((char)(half + ((half > 9) ? ('A' - 10) : '0')));
+            sb.append((char) (half + ((half > 9) ? ('A' - 10) : '0')));
         }
         return sb.toString();
     }
@@ -167,27 +166,28 @@ public class BytesUtil {
 
     /**
      * 将整数按小端模式转为4字节数组
+     *
      * @param value
-     * @return	转换结果
+     * @return 转换结果
      */
-    public static byte[] int2Bytes( int value )
-    {
+    public static byte[] int2Bytes(int value) {
         byte[] src = new byte[4];
-        src[3] =  (byte) ((value>>24) & 0xFF);
-        src[2] =  (byte) ((value>>16) & 0xFF);
-        src[1] =  (byte) ((value>>8) & 0xFF);
-        src[0] =  (byte) (value & 0xFF);
+        src[3] = (byte) ((value >> 24) & 0xFF);
+        src[2] = (byte) ((value >> 16) & 0xFF);
+        src[1] = (byte) ((value >> 8) & 0xFF);
+        src[0] = (byte) (value & 0xFF);
         return src;
     }
     // ASCII的字符串转byte数组
 
-    public static byte[] ascii2Bytes (String asciiString) {
-        if(asciiString==null) {
+    public static byte[] ascii2Bytes(String asciiString) {
+        if (asciiString == null) {
             return null;
         }
         byte[] byt = asciiString.getBytes(US_ASCII);
         return byt;
     }
+
     // ASCII的字节数组串转byte数组
     public static byte[] ASCII_To_BCD(byte[] ascii, int asc_len) {
         byte[] bcd = new byte[asc_len / 2];
@@ -198,6 +198,7 @@ public class BytesUtil {
         }
         return bcd;
     }
+
     private static byte asc_to_bcd(byte asc) {
         byte bcd;
 
@@ -213,37 +214,34 @@ public class BytesUtil {
     }
 
 
-    public static byte[] hexString2Bytes(String data)
-    {
+    public static byte[] hexString2Bytes(String data) {
         byte[] result = new byte[(data.length() + 1) / 2];
         if ((data.length() & 0x1) == 1) {
             data = data + "0";
         }
         for (int i = 0; i < result.length; i++) {
-            result[i] = ((byte)(hex2byte(data.charAt(i * 2 + 1)) | hex2byte(data.charAt(i * 2)) << 4));
+            result[i] = ((byte) (hex2byte(data.charAt(i * 2 + 1)) | hex2byte(data.charAt(i * 2)) << 4));
         }
         return result;
     }
 
-    public static byte hex2byte(char hex)
-    {
+    public static byte hex2byte(char hex) {
         if ((hex <= 'f') && (hex >= 'a')) {
-            return (byte)(hex - 'a' + 10);
+            return (byte) (hex - 'a' + 10);
         }
 
         if ((hex <= 'F') && (hex >= 'A')) {
-            return (byte)(hex - 'A' + 10);
+            return (byte) (hex - 'A' + 10);
         }
 
         if ((hex <= '9') && (hex >= '0')) {
-            return (byte)(hex - '0');
+            return (byte) (hex - '0');
         }
 
         return 0;
     }
 
-    public static byte[] subBytes(byte[] data, int offset, int len)
-    {
+    public static byte[] subBytes(byte[] data, int offset, int len) {
         if ((offset < 0) || (data.length <= offset)) {
             return null;
         }
@@ -258,8 +256,7 @@ public class BytesUtil {
         return ret;
     }
 
-    public static byte[] merage(byte[][] data)
-    {
+    public static byte[] merage(byte[][] data) {
         int len = 0;
         for (int i = 0; i < data.length; i++) {
             if (data[i] == null) {
@@ -270,15 +267,17 @@ public class BytesUtil {
 
         byte[] newData = new byte[len];
         len = 0;
-        byte[][] arrayOfByte = data; int j = data.length; for (int i = 0; i < j; i++) { byte[] d = arrayOfByte[i];
-        System.arraycopy(d, 0, newData, len, d.length);
-        len += d.length;
-    }
+        byte[][] arrayOfByte = data;
+        int j = data.length;
+        for (int i = 0; i < j; i++) {
+            byte[] d = arrayOfByte[i];
+            System.arraycopy(d, 0, newData, len, d.length);
+            len += d.length;
+        }
         return newData;
     }
 
-    public static int bytesToInt(byte[] bytes)
-    {
+    public static int bytesToInt(byte[] bytes) {
         if (bytes.length > 4) {
             return -1;
         }
@@ -292,11 +291,10 @@ public class BytesUtil {
         return result;
     }
 
-    public static byte[] intToBytes(int intValue)
-    {
+    public static byte[] intToBytes(int intValue) {
         byte[] bytes = new byte[4];
         for (int i = 0; i < bytes.length; i++) {
-            bytes[i] = ((byte)(intValue >> (3 - i << 3) & 0xFF));
+            bytes[i] = ((byte) (intValue >> (3 - i << 3) & 0xFF));
         }
         return bytes;
     }
@@ -305,7 +303,6 @@ public class BytesUtil {
         return new BigInteger("E0F8C8", 16).toString(2);
 
     }
-
 
 
 }

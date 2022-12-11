@@ -27,7 +27,6 @@ class SocketRequest
      */
     @Throws(Exception::class)
     fun send(context: Context, isoStream: ByteArray): String {
-
         if (connectionData.isSSL) {
             val sslsocket = getConnection(
                 context,
@@ -59,7 +58,6 @@ class SocketRequest
     fun send(isoStream: ByteArray, socket: Socket): String {
         var responseArray = byteArrayOf()
         try {
-
             val dataOut = DataOutputStream(socket.getOutputStream())
             val dataIn = DataInputStream(socket.getInputStream())
 
