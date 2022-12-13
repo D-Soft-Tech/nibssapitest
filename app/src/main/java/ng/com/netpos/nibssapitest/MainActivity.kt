@@ -46,7 +46,7 @@ class MainActivity : AppCompatActivity() {
             businessName = "Netplus",
             partnerName = "Netplus",
             partnerId = "5de231d9-1be0-4c31-8658-6e15892f2b83",
-            terminalId = "2033ALZP",
+            terminalId = "20398A4C",
             terminalSerialNumber = NetPosSdk.getDeviceSerial(),
             businessAddress = "Marwa Lagos",
             customerName = "Test Account"
@@ -82,22 +82,22 @@ class MainActivity : AppCompatActivity() {
                 cardData = cardData!!,
                 accountType = IsoAccountType.SAVINGS
             )
-            NewNibssApiWrapper.triggerReversalForLastTransaction(
-                this,
-                reversalRrn.text.toString(),
-                userData.terminalId,
-                Gson().toJson(makePaymentParams)
-            ).subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe { t1, t2 ->
-                    t1?.let {
-                        Toast.makeText(this, Gson().toJson(it), Toast.LENGTH_LONG).show()
-                        Timber.d("REVERSAL_RESPONSE====>%s", Gson().toJson(it))
-                    }
-                    t2?.let {
-                        Timber.d("REVERSAL_ERROR====>%s", it.localizedMessage)
-                    }
-                }.disposeWith(compositeDisposable)
+//            NewNibssApiWrapper.triggerReversalForLastTransaction(
+//                this,
+//                reversalRrn.text.toString(),
+//                userData.terminalId,
+//                Gson().toJson(makePaymentParams)
+//            ).subscribeOn(Schedulers.io())
+//                .observeOn(AndroidSchedulers.mainThread())
+//                .subscribe { t1, t2 ->
+//                    t1?.let {
+//                        Toast.makeText(this, Gson().toJson(it), Toast.LENGTH_LONG).show()
+//                        Timber.d("REVERSAL_RESPONSE====>%s", Gson().toJson(it))
+//                    }
+//                    t2?.let {
+//                        Timber.d("REVERSAL_ERROR====>%s", it.localizedMessage)
+//                    }
+//                }.disposeWith(compositeDisposable)
         }
 
         newNibssApiWrapper.logUser(this, Gson().toJson(userData))

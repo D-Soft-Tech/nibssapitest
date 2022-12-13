@@ -434,11 +434,6 @@ object NewNibssApiWrapper {
                             transactionTrackingTableDao
                         )
                         Timber.d(
-                            // 202212022436
-                            // 202212022437
-                            // 202212022438
-                            // 202212022439
-                            // 202212022440
                             "PAYMENT_DONE_SUCCESSFULLY=====>%s",
                             gson.toJson(transResponse)
                         )
