@@ -46,7 +46,7 @@ class MainActivity : AppCompatActivity() {
             businessName = "Netplus",
             partnerName = "Netplus",
             partnerId = "5de231d9-1be0-4c31-8658-6e15892f2b83",
-            terminalId = "20398A4C",
+            terminalId = "2033ALZP",
             terminalSerialNumber = NetPosSdk.getDeviceSerial(),
             businessAddress = "Marwa Lagos",
             customerName = "Test Account"
