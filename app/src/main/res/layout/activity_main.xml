@@ -8,12 +8,12 @@
     tools:context=".MainActivity">
 
     <Button
-        app:layout_constraintStart_toStartOf="parent"
-        android:text="@string/configure"
-        app:layout_constraintTop_toTopOf="@id/make_payment"
         android:id="@+id/configure"
         android:layout_width="wrap_content"
-        android:layout_height="wrap_content"/>
+        android:layout_height="wrap_content"
+        android:text="@string/configure"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@id/make_payment" />
 
     <Button
         android:id="@+id/make_payment"
@@ -42,5 +42,25 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         app:layout_constraintGuide_percent="0.25" />
+
+    <Button
+        android:id="@+id/reversal_button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/trigger_reversal"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="@+id/make_payment"
+        app:layout_constraintStart_toStartOf="@+id/configure"
+        app:layout_constraintTop_toBottomOf="@+id/reversl_editText" />
+
+    <EditText
+        android:id="@+id/reversl_editText"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="85dp"
+        android:hint="Enter rrn of the last transaction"
+        app:layout_constraintEnd_toEndOf="@+id/make_payment"
+        app:layout_constraintStart_toStartOf="@+id/configure"
+        app:layout_constraintTop_toBottomOf="@+id/configure" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

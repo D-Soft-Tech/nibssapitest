@@ -74,7 +74,10 @@ object IsoAdapter {
                 Log.d("Epms Library", " MTI : " + msg.type.toString(16))
                 for (i in 1..128) {
                     if (msg.hasField(i)) {
-                        Log.d("Epms Library", "    Field-" + i + " : " + getResponseDataFromIndex(msg, i))
+                        Log.d(
+                            "Epms Library",
+                            "    Field-" + i + " : " + getResponseDataFromIndex(msg, i)
+                        )
                     }
                 }
             } catch (e: Exception) {

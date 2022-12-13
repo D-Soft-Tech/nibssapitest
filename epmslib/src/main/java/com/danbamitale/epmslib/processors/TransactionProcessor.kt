@@ -178,6 +178,11 @@ class TransactionProcessor(private val hostConfig: HostConfig) {
         return String.format("%012d%012dD00000000D00000000", replacementAmount, replacementAmount)
     }
 
+    fun getIsoMessageForReversal(
+        requestData: TransactionRequestData,
+        cardData: CardData
+    ): IsoMessage = setBaseFields(requestData, cardData, hostConfig.configData)
+
     /**
      * Send a payment request to processor
      *

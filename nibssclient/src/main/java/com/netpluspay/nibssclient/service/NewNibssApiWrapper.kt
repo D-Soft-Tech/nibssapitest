@@ -7,8 +7,8 @@ import android.text.format.DateUtils
 import android.widget.Toast
 import androidx.lifecycle.MutableLiveData
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
-import androidx.work.* // ktlint-disable no-wildcard-imports
-import com.danbamitale.epmslib.entities.* // ktlint-disable no-wildcard-imports
+import androidx.work.*
+import com.danbamitale.epmslib.entities.*
 import com.danbamitale.epmslib.entities.KeyHolder
 import com.danbamitale.epmslib.entities.OriginalDataElements
 import com.danbamitale.epmslib.entities.TransactionResponse
@@ -26,7 +26,7 @@ import com.netpluspay.nibssclient.R
 import com.netpluspay.nibssclient.dao.TransactionResponseDao
 import com.netpluspay.nibssclient.dao.TransactionTrackingTableDao
 import com.netpluspay.nibssclient.database.AppDatabase
-import com.netpluspay.nibssclient.models.* // ktlint-disable no-wildcard-imports
+import com.netpluspay.nibssclient.models.*
 import com.netpluspay.nibssclient.network.RrnApiService
 import com.netpluspay.nibssclient.network.StormApiClient
 import com.netpluspay.nibssclient.network.StormApiService
@@ -381,11 +381,20 @@ object NewNibssApiWrapper {
                     .flatMap { transResponse ->
                         updateTransactionInBackendAfterMakingPayment(
                             transResponse.RRN,
-                            mapTransactionResponseToTransactionWithRemark(transResponse),
+                            mapDanbamitaleResponseToResponseWithRrn(
+                                transResponse,
+                                remark,
+                                transResponse.RRN
+                            ),
                             if (transResponse.responseCode == "00") "APPROVED" else transResponse.responseMessage,
                             transactionTrackingTableDao
                         )
                         Timber.d(
+                            // 202212022436
+                            // 202212022437
+                            // 202212022438
+                            // 202212022439
+                            // 202212022440
                             "PAYMENT_DONE_SUCCESSFULLY=====>%s",
                             gson.toJson(transResponse)
                         )
@@ -500,7 +509,9 @@ object NewNibssApiWrapper {
 
         val processor = TransactionProcessor(hostConfig)
 
-        return processor.rollback(context, MessageReasonCode.CustomerCancellation)
+        val isoMessage = processor.getIsoMessageForReversal(requestData, params.cardData)
+
+        return processor.rollback(context, MessageReasonCode.CustomerCancellation, isoMessage)
             .flatMap {
                 val transRes = mapDanbamitaleResponseToResponseWithRrn(
                     it,
@@ -537,41 +548,38 @@ object NewNibssApiWrapper {
         transactionTrackingTableDao: TransactionTrackingTableDao
     ) {
         val dataToLog = DataToLogAfterConnectingToNibss(status, transactionResponse, rrn)
-        compositeDisposable.add(
-            stormApiService.updateLogAfterConnectingToNibss2(rrn, dataToLog)
-                .subscribeOn(Schedulers.io())
-                .doOnError {
-                    saveTransactionForTracking(
-                        ModelObjects.TransactionResponseXForTracking(
-                            dataToLog.rrn,
-                            mapToTransactionResponseX(mapToTransactionResponse(dataToLog.transactionResponse)),
-                            dataToLog.status
-                        ),
-                        transactionTrackingTableDao
-                    )
-                    Timber.d("ERROR_SAVING_TRANS_FOR_TRACKING==>${it.localizedMessage}")
-                }
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe { data, error ->
-                    data?.let {
-                        if (it.message()
-                            .contains("There is an error") || it.code() == 404 || it.code() == 500 || it.code() in 400..500
-                        ) {
-                            saveTransactionForTracking(
-                                ModelObjects.TransactionResponseXForTracking(
-                                    dataToLog.rrn,
-                                    mapToTransactionResponseX(mapToTransactionResponse(dataToLog.transactionResponse)),
-                                    dataToLog.status
-                                ),
-                                transactionTrackingTableDao
-                            )
-                        }
-                    }
-                    error?.let {
+        stormApiService.updateLogAfterConnectingToNibss2(rrn, dataToLog)
+            .subscribeOn(Schedulers.io())
+            .doOnError {
+                saveTransactionForTracking(
+                    ModelObjects.TransactionResponseXForTracking(
+                        dataToLog.rrn,
+                        mapToTransactionResponseX(mapToTransactionResponse(dataToLog.transactionResponse)),
+                        dataToLog.status
+                    ),
+                    transactionTrackingTableDao
+                )
+                Timber.d("ERROR_SAVING_TRANS_FOR_TRACKING==>${it.localizedMessage}")
+            }
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe { data, error ->
+                data?.let {
+                    if (it.message()
+                        .contains("There is an error") || it.code() == 404 || it.code() == 500 || it.code() in 400..500
+                    ) {
+                        saveTransactionForTracking(
+                            ModelObjects.TransactionResponseXForTracking(
+                                dataToLog.rrn,
+                                mapToTransactionResponseX(mapToTransactionResponse(dataToLog.transactionResponse)),
+                                dataToLog.status
+                            ),
+                            transactionTrackingTableDao
+                        )
                     }
                 }
-        )
-        disposeDisposables()
+                error?.let {
+                }
+            }.disposeWith(compositeDisposable)
     }
 
     private fun updateTransactionInBackendAfterMakingPaymentA(
@@ -601,6 +609,7 @@ object NewNibssApiWrapper {
         transactionResponse: ModelObjects.TransactionResponseXForTracking,
         transactionTrackingTableDao: TransactionTrackingTableDao
     ) {
+        val disposable = CompositeDisposable()
         transactionTrackingTableDao.insertTransactionForTracking(transactionResponse)
             .subscribeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
@@ -611,7 +620,7 @@ object NewNibssApiWrapper {
                 t2?.let {
                     Timber.d("ERROR_SAVING_FOR_TRACKING=====>%s", it.localizedMessage)
                 }
-            }.disposeWith(compositeDisposable)
+            }.disposeWith(disposable)
         disposeDisposables()
     }
 

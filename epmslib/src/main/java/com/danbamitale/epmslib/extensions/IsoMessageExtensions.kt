@@ -1,11 +1,10 @@
 package com.danbamitale.epmslib.extensions
 
-import com.solab.iso8583.IsoMessage
 import com.danbamitale.epmslib.entities.TransactionResponse
 import com.danbamitale.epmslib.entities.TransactionType
 import com.danbamitale.epmslib.utils.Constants
 import com.danbamitale.epmslib.utils.IsoAccountType
-
+import com.solab.iso8583.IsoMessage
 
 fun <T> IsoMessage.getValue(index: Int): T = this.getField<T>(index).value
 
@@ -17,14 +16,14 @@ fun IsoMessage.toTransactionResponse() = TransactionResponse(
     otherAmount = 0,
     transmissionDateTime = getValue(Constants.TRANSMISSION_DATE_TIME_7),
     STAN = getValue(Constants.SYSTEMS_TRACE_AUDIT_NUMBER_11),
-    cardExpiry =  if (hasField(Constants.DATE_EXPIRATION_14))  getValue(Constants.DATE_EXPIRATION_14) else "",
+    cardExpiry = if (hasField(Constants.DATE_EXPIRATION_14)) getValue(Constants.DATE_EXPIRATION_14) else "",
     RRN = getValue(Constants.RETRIEVAL_REFERENCE_NUMBER_37),
     localTime_12 = getValue(Constants.TIME_LOCAL_TRANSACTION_12),
     localDate_13 = getValue(Constants.DATE_LOCAL_TRANSACTION_13),
     acquiringInstCode = getValue(Constants.ACQUIRING_INSTITUTION_ID_CODE_32),
-    terminalId =  getValue(Constants.CARD_ACCEPTOR_TERMINAL_ID_41),
+    terminalId = getValue(Constants.CARD_ACCEPTOR_TERMINAL_ID_41),
     merchantId = getValue(Constants.CARD_ACCEPTOR_ID_CODE_42),
-    originalForwardingInstCode =  if(hasField(Constants.FORWARDING_INSTITUTION_IDENTIFICATION_33)) getValue(Constants.FORWARDING_INSTITUTION_IDENTIFICATION_33) else "",
+    originalForwardingInstCode = if (hasField(Constants.FORWARDING_INSTITUTION_IDENTIFICATION_33)) getValue(Constants.FORWARDING_INSTITUTION_IDENTIFICATION_33) else "",
     authCode = if (hasField(Constants.AUTHORIZATION_CODE_38)) getValue(Constants.AUTHORIZATION_CODE_38) else "",
     responseCode = if (hasField(Constants.RESPONSE_CODE_39)) getValue(Constants.RESPONSE_CODE_39) else "20",
     additionalAmount_54 = if (hasField(Constants.ADDITIONAL_AMOUNTS_54)) getValue(Constants.ADDITIONAL_AMOUNTS_54) else "",
@@ -82,4 +81,4 @@ fun IsoMessage.getAccountType(): IsoAccountType =
         ).toInt()
     )
 
-//fun IsoMessage.getOtherAmount(): Long
+// fun IsoMessage.getOtherAmount(): Long

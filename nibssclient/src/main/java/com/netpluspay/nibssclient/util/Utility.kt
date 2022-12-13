@@ -120,7 +120,7 @@ object Utility {
                         id = 0,
                         localDate_13 = RandomNumUtil.getDate(),
                         localTime_12 = formattedTime.replace(":", ""),
-                        maskedPan = cardData.pan,
+                        maskedPan = cardData.pan.maskPan(),
                         merchantId = mid,
                         originalForwardingInstCode = "",
                         otherAmount = requestData.otherAmount.toInt(),

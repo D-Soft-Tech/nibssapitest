@@ -26,7 +26,7 @@ class TransactionProcessorWrapper @JvmOverloads constructor(
     private val otherAmount: Long = 0,
     var transactionRequestData: TransactionRequestData? = null,
     var keyHolder: KeyHolder? = null,
-    var configData: ConfigData? = null,
+    var configData: ConfigData? = null
 ) {
     private val posvas_ip: String = "196.6.103.10"
     private val posvas_port = 55533
@@ -79,10 +79,11 @@ class TransactionProcessorWrapper @JvmOverloads constructor(
                 uniqueId = transactionRequestData!!.iswParameters!!.terminalSerial
                 cardSequenceNumber =
                     cardData.panSequenceNumber.let { csn ->
-                        if (csn.length == 3)
+                        if (csn.length == 3) {
                             csn.takeLast(2)
-                        else
+                        } else {
                             csn
+                        }
                     }
                 amountAuthorized = tlvList.getTLV("9F02").value
                 amountOther = tlvList.getTLV("9F03").value
@@ -120,13 +121,14 @@ class TransactionProcessorWrapper @JvmOverloads constructor(
                     transactionRequestData!!.iswParameters!!.receivingInstitutionId
                 surcharge = "1075"
                 ksnd = "605"
-                ksn = if (getCVMMethod(tlvList.getTLV("9F34").value) == CVMETHOD.ONLINE_PIN)
+                ksn = if (getCVMMethod(tlvList.getTLV("9F34").value) == CVMETHOD.ONLINE_PIN) {
                     "000002DDDDE00001"
-                else
+                } else {
                     ""
+                }
                 pinType = "Dukpt"
 
-                pinBlock = if (getCVMMethod(tlvList.getTLV("9F34").value) == CVMETHOD.ONLINE_PIN)
+                pinBlock = if (getCVMMethod(tlvList.getTLV("9F34").value) == CVMETHOD.ONLINE_PIN) {
                     DukptHelper.DesEncryptDukpt(
                         DukptHelper.getSessionKey(),
                         TripleDES.decrypt(
@@ -136,8 +138,9 @@ class TransactionProcessorWrapper @JvmOverloads constructor(
                             Locale.getDefault()
                         )
                     )
-                else
+                } else {
                     ""
+                }
                 keyLabel = "000002"
                 destinationAccountNumber =
                     transactionRequestData!!.iswParameters!!.destinationAccountNumber
@@ -206,12 +209,13 @@ class TransactionProcessorWrapper @JvmOverloads constructor(
     @JvmOverloads
     fun rollback(
         context: Context,
-        reversalReasonCode: MessageReasonCode = MessageReasonCode.Timeout,
+        reversalReasonCode: MessageReasonCode = MessageReasonCode.Timeout
     ): Single<TransactionResponse> {
-        return if (transactionRoute == TransactionRoute.NIBSS)
+        return if (transactionRoute == TransactionRoute.NIBSS) {
             transactionProcessor.rollback(context, reversalReasonCode)
-        else
+        } else {
             Single.error(Exception("Cannot rollback"))
+        }
     }
 
     private fun getConnectionData(posMode: PosMode): ConnectionData {

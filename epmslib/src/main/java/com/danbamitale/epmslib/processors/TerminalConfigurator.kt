@@ -29,8 +29,10 @@ class TerminalConfigurator(connectionData: ConnectionData) {
         val configData = ConfigData()
         val responseDataCodes = arrayOf(
             ConfigData.TAG_LEN_CALL_HOME_TIME,
-            ConfigData.TAG_LEN_CARD_ACCEPTOR_ID_CODE, ConfigData.TAG_LEN_COUNTRY_CODE,
-            ConfigData.TAG_LEN_EPMS_DATE_TIME, ConfigData.TAG_LEN_CURRENCY_CODE,
+            ConfigData.TAG_LEN_CARD_ACCEPTOR_ID_CODE,
+            ConfigData.TAG_LEN_COUNTRY_CODE,
+            ConfigData.TAG_LEN_EPMS_DATE_TIME,
+            ConfigData.TAG_LEN_CURRENCY_CODE,
             ConfigData.TAG_LEN_MERCHANT_CATEGORY_CODE,
             ConfigData.TAG_LEN_MERCHANT_NAME_LOCATION,
             ConfigData.TAG_LEN_TIMEOUT
@@ -55,7 +57,6 @@ class TerminalConfigurator(connectionData: ConnectionData) {
 
     private fun nibssKeyRequest(context: Context, type: KeyType, terminalID: String) =
         Single.fromCallable {
-
             val isoMessage = IsoMessage()
             val timeMgr = IsoTimeManager()
 
@@ -254,7 +255,6 @@ class TerminalConfigurator(connectionData: ConnectionData) {
      */
     fun downloadNibssKeys(context: Context, terminalID: String): Single<KeyHolder> =
         Single.fromCallable {
-
             val encryptedMasterKey =
                 nibssKeyRequest(
                     context,
@@ -293,7 +293,8 @@ class TerminalConfigurator(connectionData: ConnectionData) {
         context,
         TransactionType.TERMINAL_PARAMETER_DOWNLOAD,
         terminalID,
-        sessionKey, terminalSerial,
+        sessionKey,
+        terminalSerial,
         Constants.PRIVATE_FIELD_MGT_DATA1_62
     ).map {
         parseField62(it)
@@ -316,7 +317,9 @@ class TerminalConfigurator(connectionData: ConnectionData) {
     ): Single<List<NibssCA>> = doNetworkParamDownload(
         context,
         TransactionType.CA_PUBLIC_KEY_DOWNLOAD,
-        terminalID, sessionKey, terminalSerial,
+        terminalID,
+        sessionKey,
+        terminalSerial,
         Constants.PRIVATE_FIELD_MGT_DATA2_63
     ).map {
         NibssCA.parseNibssResponse(it)

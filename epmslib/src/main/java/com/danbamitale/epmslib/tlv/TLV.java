@@ -1,8 +1,6 @@
 package com.danbamitale.epmslib.tlv;
 
 
-
-
 import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
 
@@ -12,13 +10,12 @@ public class TLV {
     private int length = -1;
     private byte[] value;
 
-    public static TLV fromRawData(byte[] tlData, int tlOffset, byte[] vData, int vOffset)
-    {
+    public static TLV fromRawData(byte[] tlData, int tlOffset, byte[] vData, int vOffset) {
         int tLen = getTLength(tlData, tlOffset);
         int lLen = getLLength(tlData, tlOffset + tLen);
         int vLen = calcValueLength(tlData, tlOffset + tLen, lLen);
         TLV d = new TLV();
-        d.data = BytesUtil.merage(new byte[][] { BytesUtil.subBytes(tlData, tlOffset, tLen + lLen), BytesUtil.subBytes(vData, vOffset, vLen) });
+        d.data = BytesUtil.merage(new byte[][]{BytesUtil.subBytes(tlData, tlOffset, tLen + lLen), BytesUtil.subBytes(vData, vOffset, vLen)});
         d.getTag();
         d.getLength();
         d.getBytesValue();
@@ -29,7 +26,7 @@ public class TLV {
     public static TLV fromData(String tagName, byte[] value) {
         byte[] tag = BytesUtil.hexString2Bytes(tagName);
         TLV d = new TLV();
-        d.data = BytesUtil.merage(new byte[][] { tag, makeLengthData(value.length), value });
+        d.data = BytesUtil.merage(new byte[][]{tag, makeLengthData(value.length), value});
         d.tag = tagName;
         d.length = value.length;
         d.value = value;
@@ -169,21 +166,20 @@ public class TLV {
             byte[] lenData = new byte[4];
             int validIndex = -1;
             for (int i = 0; i < lenData.length; i++) {
-                lenData[i] = ((byte)(len >> 8 * (3 - i) & 0xF));
+                lenData[i] = ((byte) (len >> 8 * (3 - i) & 0xF));
                 if ((lenData[(3 - i)] != 0) && (validIndex < 0)) {
                     validIndex = i;
                 }
             }
             lenData = BytesUtil.subBytes(lenData, validIndex, -1);
-            lenData = BytesUtil.merage(new byte[][] { { (byte)(0x80 & lenData.length) }, lenData });
+            lenData = BytesUtil.merage(new byte[][]{{(byte) (0x80 & lenData.length)}, lenData});
             return lenData;
         }
 
-        return new byte[] { (byte)len };
+        return new byte[]{(byte) len};
     }
 
-    public boolean equals(Object obj)
-    {
+    public boolean equals(Object obj) {
         if (obj == this) {
             return true;
         }
@@ -192,15 +188,14 @@ public class TLV {
             return false;
         }
 
-        if ((this.data == null) || (((TLV)obj).data == null)) {
+        if ((this.data == null) || (((TLV) obj).data == null)) {
             return false;
         }
 
-        return Arrays.equals(this.data, ((TLV)obj).data);
+        return Arrays.equals(this.data, ((TLV) obj).data);
     }
 
-    public String toString()
-    {
+    public String toString() {
         if (this.data == null) {
             return super.toString();
         }
