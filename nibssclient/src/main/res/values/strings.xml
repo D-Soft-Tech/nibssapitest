@@ -2,4 +2,6 @@
 <resources>
     <string name="userMD">2033LAGPOOO7885</string>
     <string name="error_connecting_to_server">Error connecting to server</string>
+    <string name="reversal_approved">Reversal Approved</string>
+    <string name="reversal_unsuccessful">Reversal successful</string>
 </resources>

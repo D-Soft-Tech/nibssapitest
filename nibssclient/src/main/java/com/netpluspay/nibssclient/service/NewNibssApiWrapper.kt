@@ -5,6 +5,7 @@ import android.content.Intent
 import android.os.Build
 import android.text.format.DateUtils
 import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.lifecycle.MutableLiveData
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.work.*
@@ -59,6 +60,7 @@ import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.schedulers.Schedulers
 import retrofit2.Response
 import timber.log.Timber
+import java.text.SimpleDateFormat
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.*
@@ -106,6 +108,22 @@ object NewNibssApiWrapper {
     private var iswPaymentProcessorObject: TransactionProcessorWrapper? = null
     private val compositeDisposable: CompositeDisposable by lazy { CompositeDisposable() }
 
+    /**
+     * Registers the parameters of the user and the terminal
+     * @param context: Context
+     * @param serializedUserData: String
+     * Example user data is as follows: UserData(
+     businessName = "Netplus",
+     partnerName = "Netplus",
+     partnerId = "5de231d9-1be0-4c31-8658-6e15892f2b83",
+     terminalId = "2033ALZP",
+     terminalSerialNumber = "1234556789", // This is just a placeholder, Kindly replace with yours
+     businessAddress = "Marwa Lagos",
+     customerName = "Test Account"
+     )
+     *
+     * @return Unit
+     * */
     fun logUser(context: Context, serializedUserData: String) {
         val userData = Gson().fromJson(serializedUserData, UserData::class.java)
         if (userData !is UserData) {
@@ -127,6 +145,13 @@ object NewNibssApiWrapper {
     private var keyHolder: KeyHolder? = null
     private var configData: ConfigData? = null
 
+    /**
+     * Configures the terminal and sets up other neccessary data
+     * @param context: Context
+     * @param configureSilently: Boolean
+     * @param serializedUserData: String
+     * @return Single<Pair<KeyHolder?, ConfigData?>> Single of pair of Keyholder and configData objects
+     * */
     fun init(
         context: Context,
         configureSilently: Boolean = false,
@@ -149,9 +174,6 @@ object NewNibssApiWrapper {
         Timber.d("KEY_HOLDER$keyHolder")
         configData = Singletons.getConfigData()
         val localBroadcastManager = LocalBroadcastManager.getInstance(context)
-//        if (isConfigurationInProcess) {
-//            return Single.just(Pair(keyHolder, configData))
-//        }
         configurationStatus = 0
         sendIntent.putExtra(CONFIGURATION_STATUS, configurationStatus)
         localBroadcastManager.sendBroadcast(sendIntent)
@@ -174,7 +196,7 @@ object NewNibssApiWrapper {
         return req
     }
 
-    fun callHome(context: Context): Single<Pair<KeyHolder?, ConfigData?>> {
+    private fun callHome(context: Context): Single<Pair<KeyHolder?, ConfigData?>> {
         Timber.e(keyHolder.toString())
         return terminalConfigurator.nibssCallHome(
             context,
@@ -188,6 +210,28 @@ object NewNibssApiWrapper {
             } else Single.error(Exception("call home failed"))
         }
     }
+
+    /**
+     * Calls Home to refresh the session key
+     * Can be called after at an interval of 5 - 10 minutes or if the app has been idle for a while
+     *
+     * @param context
+     * @param terminalId
+     * @param keyHolderClearSessionKey
+     * @param terminalSerialNumber
+     * @return String, which when successful is "00" else, call the configure terminal to get a new session key
+     * */
+    fun callHomeToRefreshSessionKeys(
+        context: Context,
+        terminalId: String,
+        keyHolderClearSessionKey: String,
+        terminalSerialNumber: String
+    ): Single<String> = terminalConfigurator.nibssCallHome(
+        context,
+        terminalId,
+        keyHolderClearSessionKey,
+        terminalSerialNumber
+    )
 
     private fun configureTerminal(context: Context): Single<Pair<KeyHolder?, ConfigData?>> {
         val localBroadcastManager = LocalBroadcastManager.getInstance(context)
@@ -447,23 +491,21 @@ object NewNibssApiWrapper {
      * @param context: Context
      * @param rrnOfTheTransaction: String (rrn of the transaction you want to trigger reversal for)
      * @param terminalId: String? (tid of your device), this can be null
-     * @param schemeOfTheCardUsedForTheTransaction: String (cardScheme of the card used to initiate this transaction, e.g Visa, MasterCard or Verve)
-     * @param makePaymentParamsOfTheTransaction: String, stringified makePaymentParameter of the transaction you want to trigger reversal for
+     * @param serializedMakePaymentParamsOfTheTransaction: String, serialized makePaymentParameter of the transaction you want to trigger reversal for
      * @return Single<TransactionWithRemark?>
-     * */
-    fun triggerReversalForLastTransaction(
+     **/
+    private fun triggerReversalForLastTransaction(
         context: Context,
         rrnOfTheTransaction: String,
-        terminalId: String?,
-        schemeOfTheCardUsedForTheTransaction: String,
-        makePaymentParamsOfTheTransaction: String
+        terminalId: String,
+        serializedMakePaymentParamsOfTheTransaction: String
     ): Single<TransactionWithRemark?> {
         val transactionTrackingTableDao =
             AppDatabase.getDatabaseInstance(context).transactionTrackingTableDao()
 
         val transactionType = TransactionType.REVERSAL
         val params = gson.fromJson(
-            if (makePaymentParamsOfTheTransaction.isNotEmpty()) makePaymentParamsOfTheTransaction else lastMakePaymentParam.value,
+            if (serializedMakePaymentParamsOfTheTransaction.isNotEmpty()) serializedMakePaymentParamsOfTheTransaction else lastMakePaymentParam.value,
             MakePaymentParams::class.java
         )
         validateField(params.amount)
@@ -484,7 +526,7 @@ object NewNibssApiWrapper {
             }
 
         val hostConfig = HostConfig(
-            if (terminalId.isNullOrEmpty()) getUserData().terminalId else terminalId,
+            if (terminalId.isEmpty()) getUserData().terminalId else terminalId,
             connectionData,
             keyHolder,
             configData
@@ -511,19 +553,21 @@ object NewNibssApiWrapper {
 
         val isoMessage = processor.getIsoMessageForReversal(requestData, params.cardData)
 
-        return processor.rollback(context, MessageReasonCode.CustomerCancellation, isoMessage)
+        return processor.rollback(context, MessageReasonCode.UnSpecified, isoMessage)
             .flatMap {
                 val transRes = mapDanbamitaleResponseToResponseWithRrn(
                     it,
                     lastTransactionRemark.value!!,
                     rrnOfTheTransaction
                 )
-                updateTransactionInBackendAfterMakingPayment(
-                    rrnOfTheTransaction,
-                    transRes,
-                    "REVERSED",
-                    transactionTrackingTableDao
-                )
+                if (it.responseCode == "00") {
+                    updateTransactionInBackendAfterMakingPayment(
+                        rrnOfTheTransaction,
+                        transRes,
+                        "REVERSED",
+                        transactionTrackingTableDao
+                    )
+                }
                 Single.just(it)
             }
             .flatMap {
@@ -580,29 +624,6 @@ object NewNibssApiWrapper {
                 error?.let {
                 }
             }.disposeWith(compositeDisposable)
-    }
-
-    private fun updateTransactionInBackendAfterMakingPaymentA(
-        rrn: String,
-        transactionResponse: TransactionWithRemark,
-        status: String,
-        transactionTrackingTableDao: TransactionTrackingTableDao
-    ): Single<LogToBackendResponse> {
-        val dataToLog = DataToLogAfterConnectingToNibss(status, transactionResponse, rrn)
-        return stormApiService.updateLogAfterConnectingToNibss(rrn, dataToLog)
-            .subscribeOn(Schedulers.io())
-            .doOnError {
-                saveTransactionForTracking(
-                    ModelObjects.TransactionResponseXForTracking(
-                        dataToLog.rrn,
-                        mapToTransactionResponseX(mapToTransactionResponse(dataToLog.transactionResponse)),
-                        dataToLog.status
-                    ),
-                    transactionTrackingTableDao
-                )
-                Timber.d("ERROR_UPDATING_TRANS==>${it.localizedMessage}")
-            }
-            .onErrorResumeNext(Single.just(LogToBackendResponse(listOf(1), "", "failed")))
     }
 
     private fun saveTransactionForTracking(
@@ -683,6 +704,18 @@ object NewNibssApiWrapper {
                 )
         )
         disposable.clear()
+    }
+
+    /**
+     * Parse the date time gotten from the payload to this method to get the time in milliseconds and format as you like
+     *@param timeInString: String Time from the payload received after making payment
+     * @return Long which is the milliseconds equivalence of the time
+     * */
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun getTimeInMilliSeconds(timeInString: String): Long {
+        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss a")
+        val date: Date = sdf.parse(timeInString)!!
+        return date.time
     }
 
     fun getDateObject(dateInString: String): LocalDateTime? =

@@ -6,10 +6,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.danbamitale.epmslib.entities.CardData
-import com.danbamitale.epmslib.entities.KeyHolder
-import com.danbamitale.epmslib.entities.TransactionType
-import com.danbamitale.epmslib.entities.clearPinKey
+import com.danbamitale.epmslib.entities.*
 import com.google.gson.Gson
 import com.netpluspay.netpossdk.NetPosSdk
 import com.netpluspay.netpossdk.emv.CardReadResult
@@ -34,6 +31,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var editAmount: EditText
     private lateinit var reversalRrn: EditText
     private lateinit var reversalBtn: Button
+    private lateinit var callHomeButton: Button
     private lateinit var userData: UserData
     private var cardData: CardData? = null
     private var previousAmount: Long? = null
@@ -43,6 +41,7 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
         editAmount = findViewById(R.id.editTextNumber)
         reversalBtn = findViewById(R.id.reversal_button)
+        callHomeButton = findViewById(R.id.call_home_btn)
         userData = UserData(
             businessName = "Netplus",
             partnerName = "Netplus",
@@ -52,6 +51,27 @@ class MainActivity : AppCompatActivity() {
             businessAddress = "Marwa Lagos",
             customerName = "Test Account"
         )
+
+        callHomeButton.setOnClickListener {
+            val savedKeyHolder = Prefs.getString("pref_keyholder", "")
+            val keyHolder = Gson().fromJson<KeyHolder>(savedKeyHolder, KeyHolder::class.java)
+            NewNibssApiWrapper.callHomeToRefreshSessionKeys(
+                this,
+                "2033ALZP",
+                keyHolder.clearSessionKey,
+                NetPosSdk.getDeviceSerial()
+            ).subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe { t1, t2 ->
+                    t1?.let {
+                        Timber.d("CALL_HOME_RESPONSE=====>%s", it)
+                        Toast.makeText(this, it, Toast.LENGTH_LONG).show()
+                    }
+                    t2?.let {
+                        Timber.d("CALL_HOME_ERROR====>%s", it.localizedMessage)
+                    }
+                }.disposeWith(compositeDisposable)
+        }
 
         reversalRrn = findViewById(R.id.reversl_editText)
 
@@ -66,12 +86,12 @@ class MainActivity : AppCompatActivity() {
                 this,
                 reversalRrn.text.toString(),
                 userData.terminalId,
-                "Master card",
                 Gson().toJson(makePaymentParams)
             ).subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe { t1, t2 ->
                     t1?.let {
+                        Toast.makeText(this, Gson().toJson(it), Toast.LENGTH_LONG).show()
                         Timber.d("REVERSAL_RESPONSE====>%s", Gson().toJson(it))
                     }
                     t2?.let {
@@ -100,12 +120,6 @@ class MainActivity : AppCompatActivity() {
                             Prefs.getString("pref_keyholder", "KeyHolderWasn'tSaved")
                         val savedConfigData =
                             Prefs.getString("pref_config_data", "KeyHolderWasn'tSaved")
-
-                        val aa = Gson().fromJson(savedKeyHolder, KeyHolder::class.java)
-                        val bb =
-
-                            Timber.d("SAVED_KEYHOLDER%s", savedKeyHolder)
-                        Timber.d("SAVED_CONFIG_DATA%s", savedConfigData)
                     }
                     error?.let {
                         Timber.d("GOTTEN_ERROR%s", it.localizedMessage)
