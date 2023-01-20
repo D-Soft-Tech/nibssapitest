@@ -16,7 +16,7 @@ import com.netpluspay.netpossdk.utils.DeviceConfig
 import com.netpluspay.nibssclient.models.IsoAccountType
 import com.netpluspay.nibssclient.models.MakePaymentParams
 import com.netpluspay.nibssclient.models.UserData
-import com.netpluspay.nibssclient.service.NewNibssApiWrapper
+import com.netpluspay.nibssclient.service.NetposPaymentClient
 import com.netpluspay.nibssclient.work.ModelObjects.disposeWith
 import com.pixplicity.easyprefs.library.Prefs
 import com.pos.sdk.emvcore.POIEmvCoreManager
@@ -27,7 +27,7 @@ import timber.log.Timber
 
 class MainActivity : AppCompatActivity() {
     private val compositeDisposable: CompositeDisposable = CompositeDisposable()
-    var newNibssApiWrapper: NewNibssApiWrapper = NewNibssApiWrapper
+    var newNibssApiWrapper: NetposPaymentClient = NetposPaymentClient
     private lateinit var editAmount: EditText
     private lateinit var reversalRrn: EditText
     private lateinit var reversalBtn: Button
@@ -55,7 +55,7 @@ class MainActivity : AppCompatActivity() {
         callHomeButton.setOnClickListener {
             val savedKeyHolder = Prefs.getString("pref_keyholder", "")
             val keyHolder = Gson().fromJson<KeyHolder>(savedKeyHolder, KeyHolder::class.java)
-            NewNibssApiWrapper.callHomeToRefreshSessionKeys(
+            NetposPaymentClient.callHomeToRefreshSessionKeys(
                 this,
                 "2033ALZP",
                 keyHolder.clearSessionKey,
@@ -219,7 +219,7 @@ class MainActivity : AppCompatActivity() {
                                                 Timber.d(
                                                     "TIME===>%s",
                                                     Gson().toJson(
-                                                        NewNibssApiWrapper.getDateObject(
+                                                        NetposPaymentClient.getDateObject(
                                                             transactionWithRemark.transmissionDateTime
                                                         )
                                                     )

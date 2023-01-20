@@ -70,7 +70,7 @@ private const val CONFIGURATION_STATUS = "terminal_configuration_status"
 private const val CONFIGURATION_ACTION = "com.woleapp.netpos.TERMINAL_CONFIGURATION"
 private const val DEFAULT_TERMINAL_ID = "2057H63U"
 
-object NewNibssApiWrapper {
+object NetposPaymentClient {
     private lateinit var transactionResponseDao: TransactionResponseDao
     private lateinit var workManager: WorkManager
     private val gson = Gson()
