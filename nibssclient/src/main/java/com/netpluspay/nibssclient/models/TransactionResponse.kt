@@ -10,7 +10,6 @@ import com.netpluspay.nibssclient.util.Constants
 import com.netpluspay.nibssclient.util.tlv.TLVList
 import kotlinx.parcelize.IgnoredOnParcel
 import kotlinx.parcelize.Parcelize
-import java.util.ArrayList
 
 @Entity(indices = [Index(value = ["RRN"], unique = true)])
 @Parcelize
@@ -98,6 +97,14 @@ val TransactionResponse.accountBalances: List<AccountBalance>
 
 data class AccountBalance(
     val accountType: IsoAccountType,
+    val amountType: String,
+    val currencyCode: String,
+    val amountSign: Char,
+    val amount: Long
+)
+
+data class AccountBalanceResponse(
+    val accountType: String,
     val amountType: String,
     val currencyCode: String,
     val amountSign: Char,

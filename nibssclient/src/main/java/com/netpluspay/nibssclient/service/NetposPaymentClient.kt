@@ -10,6 +10,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
 import androidx.work.*
 import com.danbamitale.epmslib.entities.*
+import com.danbamitale.epmslib.entities.CardData
 import com.danbamitale.epmslib.entities.KeyHolder
 import com.danbamitale.epmslib.entities.OriginalDataElements
 import com.danbamitale.epmslib.entities.TransactionResponse
@@ -36,6 +37,7 @@ import com.netpluspay.nibssclient.util.Constants.ISW_TOKEN
 import com.netpluspay.nibssclient.util.Constants.LAST_POS_CONFIGURATION_TIME
 import com.netpluspay.nibssclient.util.Constants.PREF_CONFIG_DATA
 import com.netpluspay.nibssclient.util.Constants.PREF_KEYHOLDER
+import com.netpluspay.nibssclient.util.Mapper.mapToAccountBalanceResponse
 import com.netpluspay.nibssclient.util.RandomNumUtil.generateRandomRrn
 import com.netpluspay.nibssclient.util.RandomNumUtil.mapDanbamitaleResponseToResponseWithRrn
 import com.netpluspay.nibssclient.util.ResponseCodeWarrantingForReversalConstants.doesResponseCodeWarrantsReversal
@@ -886,5 +888,65 @@ object NetposPaymentClient {
                     Single.just(mapDanbamitaleResponseToResponseWithRrn(resp, remark, rrn))
                 }
         }
+    }
+
+    /**
+     * Checks account balance
+     * @param context
+     * @param cardData An object of card data
+     * @param accountType
+     * @param terminalId Optional
+     * @return CheckAccountBalanceResponse
+     * */
+    fun balanceEnquiry(
+        context: Context,
+        cardData: CardData,
+        accountType: String,
+        terminalId: String? = ""
+    ): Single<CheckAccountBalanceResponse> {
+        val tId = if (terminalId.isNullOrEmpty()) getUserData().terminalId else terminalId
+
+        val transactionType = TransactionType.BALANCE
+        val configData: ConfigData = Singletons.getConfigData() ?: kotlin.run {
+            showToast(
+                "Terminal has not been configured, restart the application to configure",
+                context
+            )
+            return Single.just(null)
+        }
+        val keyHolder: KeyHolder =
+            getKeyHolder() ?: kotlin.run {
+                showToast(
+                    "Terminal has not been configured, restart the application to configure",
+                    context
+                )
+                return Single.just(null)
+            }
+
+        val hostConfig = HostConfig(
+            tId,
+            connectionData,
+            keyHolder,
+            configData
+        )
+
+        val requestData =
+            TransactionRequestData(
+                transactionType,
+                amount = 0L,
+                accountType = IsoAccountType.parseStringAccountType(accountType)
+            )
+
+        val processor = TransactionProcessor(hostConfig)
+
+        return processor.processTransaction(context, requestData, cardData)
+            .flatMap {
+                val accountBalance =
+                    it.accountBalances.map { accountBalance -> accountBalance.mapToAccountBalanceResponse() }
+                val response =
+                    CheckAccountBalanceResponse(it.responseCode, it.responseMessage, accountBalance)
+
+                Single.just(response)
+            }
     }
 }

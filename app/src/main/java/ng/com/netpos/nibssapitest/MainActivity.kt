@@ -27,7 +27,7 @@ import timber.log.Timber
 
 class MainActivity : AppCompatActivity() {
     private val compositeDisposable: CompositeDisposable = CompositeDisposable()
-    var newNibssApiWrapper: NetposPaymentClient = NetposPaymentClient
+    var netposPaymentClient: NetposPaymentClient = NetposPaymentClient
     private lateinit var editAmount: EditText
     private lateinit var reversalRrn: EditText
     private lateinit var reversalBtn: Button
@@ -100,9 +100,9 @@ class MainActivity : AppCompatActivity() {
 //                }.disposeWith(compositeDisposable)
         }
 
-        newNibssApiWrapper.logUser(this, Gson().toJson(userData))
+        netposPaymentClient.logUser(this, Gson().toJson(userData))
         compositeDisposable.add(
-            newNibssApiWrapper.init(this, false, Gson().toJson(userData))
+            netposPaymentClient.init(this, false, Gson().toJson(userData))
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe { data, error ->
@@ -195,7 +195,7 @@ class MainActivity : AppCompatActivity() {
                             }
                         cardResult.cardScheme?.let { it1 ->
                             cardResult.cardHolderName?.let { it2 ->
-                                newNibssApiWrapper.makePayment(
+                                netposPaymentClient.makePayment(
                                     this,
                                     userData.terminalId,
                                     Gson().toJson(makePaymentParams),
@@ -275,7 +275,7 @@ class MainActivity : AppCompatActivity() {
             )
 
         compositeDisposable.add(
-            newNibssApiWrapper.makePayment(
+            netposPaymentClient.makePayment(
                 this,
                 userData.terminalId,
                 Gson().toJson(makePaymentParams),
