@@ -8,8 +8,8 @@ import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.lifecycle.MutableLiveData
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
-import androidx.work.*
-import com.danbamitale.epmslib.entities.*
+import androidx.work.* // ktlint-disable no-wildcard-imports
+import com.danbamitale.epmslib.entities.* // ktlint-disable no-wildcard-imports
 import com.danbamitale.epmslib.entities.CardData
 import com.danbamitale.epmslib.entities.KeyHolder
 import com.danbamitale.epmslib.entities.OriginalDataElements
@@ -28,7 +28,7 @@ import com.netpluspay.nibssclient.R
 import com.netpluspay.nibssclient.dao.TransactionResponseDao
 import com.netpluspay.nibssclient.dao.TransactionTrackingTableDao
 import com.netpluspay.nibssclient.database.AppDatabase
-import com.netpluspay.nibssclient.models.*
+import com.netpluspay.nibssclient.models.* // ktlint-disable no-wildcard-imports
 import com.netpluspay.nibssclient.network.RrnApiService
 import com.netpluspay.nibssclient.network.StormApiClient
 import com.netpluspay.nibssclient.network.StormApiService
@@ -292,7 +292,9 @@ object NetposPaymentClient {
         makePaymentParams: String,
         cardScheme: String,
         cardHolder: String,
-        remark: String
+        remark: String,
+        rrn: String = "",
+        stan: String = ""
     ): Single<TransactionWithRemark?> {
         // some comments here
         lastMakePaymentParam.postValue(makePaymentParams)

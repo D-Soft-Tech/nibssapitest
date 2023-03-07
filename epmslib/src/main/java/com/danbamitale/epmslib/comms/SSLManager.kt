@@ -6,7 +6,7 @@ import java.security.KeyStore
 import java.security.SecureRandom
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
-import javax.net.ssl.*
+import javax.net.ssl.* // ktlint-disable no-wildcard-imports
 
 object SSLManager {
 
@@ -66,5 +66,6 @@ object SSLManager {
         return context.socketFactory
     }
 
-    fun createSocket(sslSocketFactory: SSLSocketFactory, ipAddress: String, port: Int) = sslSocketFactory.createSocket(ipAddress, port)
+    fun createSocket(sslSocketFactory: SSLSocketFactory, ipAddress: String, port: Int) =
+        sslSocketFactory.createSocket(ipAddress, port)
 }

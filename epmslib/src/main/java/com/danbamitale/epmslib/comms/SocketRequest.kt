@@ -55,7 +55,7 @@ class SocketRequest
      */
 
     @Throws(Exception::class)
-    fun send(isoStream: ByteArray, socket: Socket): String {
+    private fun send(isoStream: ByteArray, socket: Socket): String {
         var responseArray = byteArrayOf()
         try {
             val dataOut = DataOutputStream(socket.getOutputStream())
