@@ -757,7 +757,7 @@ object NetposPaymentClient {
         val transactionType =
             inputTransactionType?.let { TransactionType.valueOf(it) } ?: TransactionType.PURCHASE
 
-        val configData: ConfigData = Singletons.getConfigData() ?: kotlin.run {
+        val configData: ConfigData = Singletons.getConfigData() ?: run {
             showToast(
                 "Terminal has not been configured, restart the application to configure",
                 context
