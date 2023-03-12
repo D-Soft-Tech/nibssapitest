@@ -1,14 +1,14 @@
 package com.netpluspay.nibssclient.service
 
 import android.content.Context
-import android.content.Intent
-import android.os.Build
 import android.text.format.DateUtils
 import android.widget.Toast
-import androidx.annotation.RequiresApi
 import androidx.lifecycle.MutableLiveData
 import androidx.localbroadcastmanager.content.LocalBroadcastManager
-import androidx.work.* // ktlint-disable no-wildcard-imports
+import androidx.work.Constraints
+import androidx.work.NetworkType
+import androidx.work.PeriodicWorkRequestBuilder
+import androidx.work.WorkManager
 import com.danbamitale.epmslib.entities.* // ktlint-disable no-wildcard-imports
 import com.danbamitale.epmslib.entities.CardData
 import com.danbamitale.epmslib.entities.KeyHolder
@@ -33,12 +33,13 @@ import com.netpluspay.nibssclient.network.RrnApiService
 import com.netpluspay.nibssclient.network.StormApiClient
 import com.netpluspay.nibssclient.network.StormApiService
 import com.netpluspay.nibssclient.util.ConnectionErrorConstants.isConnectionError
+import com.netpluspay.nibssclient.util.Constants.ISW_THRESHOLD_TAG
 import com.netpluspay.nibssclient.util.Constants.ISW_TOKEN
 import com.netpluspay.nibssclient.util.Constants.LAST_POS_CONFIGURATION_TIME
 import com.netpluspay.nibssclient.util.Constants.PREF_CONFIG_DATA
 import com.netpluspay.nibssclient.util.Constants.PREF_KEYHOLDER
+import com.netpluspay.nibssclient.util.Constants.TOKEN_RESPONSE_TAG
 import com.netpluspay.nibssclient.util.Mapper.mapToAccountBalanceResponse
-import com.netpluspay.nibssclient.util.RandomNumUtil.generateRandomRrn
 import com.netpluspay.nibssclient.util.RandomNumUtil.mapDanbamitaleResponseToResponseWithRrn
 import com.netpluspay.nibssclient.util.ResponseCodeWarrantingForReversalConstants.doesResponseCodeWarrantsReversal
 import com.netpluspay.nibssclient.util.ResponseCodeWarrantingForReversalConstants.wasTransactionCompletedPartially
@@ -48,7 +49,7 @@ import com.netpluspay.nibssclient.util.Singletons
 import com.netpluspay.nibssclient.util.Singletons.getKeyHolder
 import com.netpluspay.nibssclient.util.Singletons.getSavedConfigurationData
 import com.netpluspay.nibssclient.util.Singletons.setConfigData
-import com.netpluspay.nibssclient.util.Utility.getCustomRrn
+import com.netpluspay.nibssclient.util.Utility
 import com.netpluspay.nibssclient.util.Utility.getTransactionResponseToLog
 import com.netpluspay.nibssclient.util.alerts.Alerter.showToast
 import com.netpluspay.nibssclient.work.ModelObjects
@@ -62,10 +63,6 @@ import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.schedulers.Schedulers
 import retrofit2.Response
 import timber.log.Timber
-import java.text.SimpleDateFormat
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
-import java.util.*
 import java.util.concurrent.TimeUnit
 
 private const val CONFIGURATION_STATUS = "terminal_configuration_status"
@@ -79,7 +76,6 @@ object NetposPaymentClient {
     private var amountDbl = 0.0
     private var amountLong = 0L
     private var transResp: TransactionResponse? = null
-
     private val stormApiService: StormApiService = StormApiClient.getStormApiLoginInstance()
     private val rrnApiService: RrnApiService = StormApiClient.getRrnServiceInstance()
     private var configurationData: ConfigurationData = getSavedConfigurationData()
@@ -90,15 +86,10 @@ object NetposPaymentClient {
         isSSL = true
     )
     private val lastTransactionResponse = MutableLiveData<TransactionResponse>()
-    private val lastMakePaymentParam = MutableLiveData<String>()
-    private val lastTransactionRemark = MutableLiveData<String>()
     private var _partnerThreshold: MutableLiveData<GetPartnerInterSwitchThresholdResponse> =
         MutableLiveData()
     private var terminalId: String? = null
     private var currentlyLoggedInUser: UserData? = null
-    private var isConfigurationInProcess = false
-    private var configurationStatus = -1
-    private val sendIntent = Intent(CONFIGURATION_ACTION)
     private var terminalConfigurator: TerminalConfigurator =
         TerminalConfigurator(connectionData)
 
@@ -167,29 +158,21 @@ object NetposPaymentClient {
         setCurrentlyLoggedInUser()
         setTerminalId()
 
+        setUpIswToken(context)
+        getIswThreshold()
+
         KeyHolder.setHostKeyComponents(
             configurationData.key1,
             configurationData.key2
         ) // default to test  //Set your base keys here
-        Timber.e("Terminal ID: $terminalId")
         keyHolder = getKeyHolder()
-        Timber.d("KEY_HOLDER$keyHolder")
         configData = Singletons.getConfigData()
-        val localBroadcastManager = LocalBroadcastManager.getInstance(context)
-        configurationStatus = 0
-        sendIntent.putExtra(CONFIGURATION_STATUS, configurationStatus)
-        localBroadcastManager.sendBroadcast(sendIntent)
         val req = when {
             DateUtils.isToday(Prefs.getLong(LAST_POS_CONFIGURATION_TIME, 0)).not() -> {
-                Timber.e("last configuration time was not today, configure terminal now")
                 configureTerminal(context)
             }
             keyHolder != null && configData != null -> {
-                Timber.e("calling home")
-                configurationStatus = 1
                 callHome(context).onErrorResumeNext {
-                    Timber.e(it)
-                    Timber.e("call home failed, configure terminal")
                     configureTerminal(context)
                 }
             }
@@ -254,16 +237,10 @@ object NetposPaymentClient {
                         setConfigData(nibssConfigData)
                         configData = nibssConfigData
                         Prefs.putString(PREF_CONFIG_DATA, gson.toJson(nibssConfigData))
-                        configurationStatus = 1
-                        sendIntent.putExtra(CONFIGURATION_STATUS, configurationStatus)
-                        localBroadcastManager.sendBroadcast(sendIntent)
                         Timber.e("Config data set")
                         return@map Pair(nibssKeyHolder, nibssConfigData)
                     }
                 } else {
-                    configurationStatus = -1
-                    sendIntent.putExtra(CONFIGURATION_STATUS, configurationStatus)
-                    localBroadcastManager.sendBroadcast(sendIntent)
                     Single.just(Pair(null, null))
                 }
             }
@@ -296,10 +273,24 @@ object NetposPaymentClient {
         rrn: String = "",
         stan: String = ""
     ): Single<TransactionWithRemark?> {
-        // some comments here
-        lastMakePaymentParam.postValue(makePaymentParams)
+        return if (getUserData().bankAccountNumber.isEmpty() || getUserData().terminalSerialNumber.isEmpty() || getUserData().mid.isEmpty()) {
+            makePaymentNibss(context, terminalId, makePaymentParams, cardScheme, cardHolder, remark)
+        } else {
+            makePaymentIsw(context, terminalId, makePaymentParams, cardScheme, cardHolder, remark)
+        }
+    }
+
+    private fun makePaymentNibss(
+        context: Context,
+        terminalId: String? = "",
+        makePaymentParams: String,
+        cardScheme: String,
+        cardHolder: String,
+        remark: String,
+        rrn: String = "",
+        stan: String = ""
+    ): Single<TransactionWithRemark?> {
         transactionResponseDao = AppDatabase.getDatabaseInstance(context).transactionResponseDao()
-        lastTransactionRemark.postValue(remark)
         val transactionTrackingTableDao =
             AppDatabase.getDatabaseInstance(context).transactionTrackingTableDao()
         val params = gson.fromJson(makePaymentParams, MakePaymentParams::class.java)
@@ -313,20 +304,322 @@ object NetposPaymentClient {
                 GetPartnerInterSwitchThresholdResponse::class.java
             )?.interSwitchThreshold ?: 0
 
-        return getRRn()
-            .onErrorResumeNext(Single.just(Response.success(getCustomRrn())))
-            .flatMap {
-                makePaymentViaNibss(
+        return if (rrn.isNotEmpty() && rrn.length >= 12) {
+            makePaymentViaNibss(
+                context,
+                null,
+                terminalId,
+                makePaymentParams,
+                cardScheme,
+                cardHolder,
+                remark,
+                transactionTrackingTableDao,
+                rrn,
+                if (stan.isNotEmpty()) stan else null
+            )
+        } else {
+            getRRn()
+                .onErrorResumeNext(Single.just(Response.success(Utility.getCustomRrn())))
+                .flatMap {
+                    makePaymentViaNibss(
+                        context,
+                        null,
+                        terminalId,
+                        makePaymentParams,
+                        cardScheme,
+                        cardHolder,
+                        remark,
+                        transactionTrackingTableDao,
+                        it.body(),
+                        if (stan.isNotEmpty()) stan else null
+                    )
+                }
+        }
+    }
+
+    private fun makePaymentIsw(
+        context: Context,
+        terminalId: String? = "",
+        makePaymentParams: String,
+        cardScheme: String,
+        cardHolder: String,
+        remark: String,
+        rrn: String = "",
+        stan: String = ""
+    ): Single<TransactionWithRemark?> {
+        transactionResponseDao = AppDatabase.getDatabaseInstance(context).transactionResponseDao()
+        val transactionTrackingTableDao =
+            AppDatabase.getDatabaseInstance(context).transactionTrackingTableDao()
+        val params = gson.fromJson(makePaymentParams, MakePaymentParams::class.java)
+        validateField(params.amount)
+
+        val bankAccNumber = getUserData().bankAccountNumber
+        val mId = getUserData().mid
+        val institutionalCode = getUserData().institutionalCode
+
+        val interSwitchObject =
+            GetPartnerInterSwitchThresholdResponse(0, bankAccNumber, institutionalCode)
+        val interSwitchObjectInString = gson.toJson(interSwitchObject)
+
+        val iswToken = Prefs.getString(getUserData().partnerId + ISW_TOKEN, "")
+
+        return if (rrn.isNotEmpty()) {
+            abstractedCheckForIswThresholdToProcessIswPayment(
+                context,
+                terminalId,
+                makePaymentParams,
+                cardScheme,
+                cardHolder,
+                remark,
+                if (stan.isNotEmpty()) stan else null,
+                interSwitchObjectInString,
+                iswToken,
+                transactionTrackingTableDao,
+                rrn,
+                mId
+            )
+        } else {
+            return getRRn()
+                .onErrorResumeNext(Single.just(Response.success(Utility.getCustomRrn())))
+                .flatMap flatMapB@{
+                    val rrnFromBackend = it.body()
+                    return@flatMapB abstractedCheckForIswThresholdToProcessIswPayment(
+                        context,
+                        terminalId,
+                        makePaymentParams,
+                        cardScheme,
+                        cardHolder,
+                        remark,
+                        if (stan.isNotEmpty()) stan else null,
+                        interSwitchObjectInString,
+                        iswToken,
+                        transactionTrackingTableDao,
+                        rrnFromBackend ?: "",
+                        mId
+                    )
+                }
+        }
+    }
+
+    private fun abstractedCheckForIswThresholdToProcessIswPayment(
+        context: Context,
+        terminalId: String? = "",
+        makePaymentParams: String,
+        cardScheme: String,
+        cardHolder: String,
+        remark: String,
+        stan: String?,
+        interSwitchObject: String,
+        iswToken: String,
+        transactionTrackingTableDao: TransactionTrackingTableDao,
+        rrn: String,
+        mId: String
+    ): Single<TransactionWithRemark?> =
+        if (iswToken.isNotEmpty()) {
+            processTransactionViaInterSwitchMakePayment(
+                context,
+                null,
+                terminalId,
+                makePaymentParams,
+                cardScheme,
+                cardHolder,
+                remark,
+                transactionTrackingTableDao,
+                rrn,
+                interSwitchObject,
+                iswToken,
+                stan,
+                mId
+            )
+        } else {
+            getIswTokenAtRuntime(context)
+                .flatMap {
+                    return@flatMap processTransactionViaInterSwitchMakePayment(
+                        context,
+                        null,
+                        terminalId,
+                        makePaymentParams,
+                        cardScheme,
+                        cardHolder,
+                        remark,
+                        transactionTrackingTableDao,
+                        rrn,
+                        interSwitchObject,
+                        it,
+                        stan,
+                        mId
+                    )
+                }
+        }
+
+    private fun processTransactionViaInterSwitchMakePayment(
+        context: Context,
+        inputTransactionType: String? = null,
+        terminalId: String? = "",
+        makePaymentParams: String,
+        cardScheme: String,
+        cardHolder: String,
+        remark: String,
+        transactionTrackingTableDao: TransactionTrackingTableDao,
+        rrn: String?,
+        interSwitchObject: String,
+        iswToken: String,
+        stan: String?,
+        mId: String
+    ): Single<TransactionWithRemark?> {
+        val params = gson.fromJson(makePaymentParams, MakePaymentParams::class.java)
+        val transactionType =
+            inputTransactionType?.let { TransactionType.valueOf(it) } ?: TransactionType.PURCHASE
+
+        // IsoAccountType.
+        this.amountLong = amountDbl.toLong()
+
+        val requestData =
+            TransactionRequestData(
+                transactionType,
+                amountLong,
+                0L,
+                accountType = IsoAccountType.valueOf(params.accountType.name),
+                RRN = rrn,
+                STAN = stan
+            )
+
+        val destinationAcc = gson.fromJson(
+            interSwitchObject,
+            GetPartnerInterSwitchThresholdResponse::class.java
+        ).bankAccountNumber
+
+        if (destinationAcc.isEmpty()) {
+            Toast.makeText(context, "No destination account found", Toast.LENGTH_LONG).show()
+        }
+
+        val iswParam = IswParameters(
+            mId,
+            user?.business_address ?: "",
+            token = iswToken,
+            "",
+            terminalId = getUserData().terminalId,
+            terminalSerial = getUserData().terminalSerialNumber,
+            destinationAcc
+        )
+
+        requestData.iswParameters = iswParam
+
+        iswPaymentProcessorObject =
+            TransactionProcessorWrapper(
+                mId,
+                getUserData().terminalId,
+                requestData.amount,
+                transactionRequestData = requestData,
+                keyHolder = null,
+                configData = null
+            )
+
+        val transactionToLog = params.getTransactionResponseToLog(cardScheme, requestData, rrn)
+
+        return abstractedPaymentWithIswImplementation(
+            context,
+            transactionToLog,
+            params,
+            cardScheme,
+            cardHolder,
+            remark,
+            transactionTrackingTableDao,
+            rrn,
+            requestData
+        ).flatMap {
+            Single.just(it)
+        }
+    }
+
+    private fun abstractedPaymentWithIswImplementation(
+        context: Context,
+        transactionToLog: TransactionToLogBeforeConnectingToNibbs,
+        params: MakePaymentParams,
+        cardScheme: String,
+        cardHolder: String,
+        remark: String,
+        transactionTrackingTableDao: TransactionTrackingTableDao,
+        rrn: String?,
+        requestData: TransactionRequestData
+    ): Single<TransactionWithRemark> {
+        return logTransactionToBackEndBeforeMakingPayment(transactionToLog)
+            .doOnError {
+                Toast.makeText(
                     context,
-                    null,
-                    terminalId,
-                    makePaymentParams,
-                    cardScheme,
-                    cardHolder,
-                    remark,
-                    transactionTrackingTableDao,
-                    it.body()
-                )
+                    "An error occured, please try again later",
+                    Toast.LENGTH_LONG
+                ).show()
+                Timber.d("ERROR_FROM_LOGGING_TO_SERVER=====>%s", it.localizedMessage)
+                return@doOnError
+            }.flatMap {
+                params.cardData.let { cardData ->
+                    iswPaymentProcessorObject!!.processIswTransaction(cardData)
+                        .flatMap labelCheckForReversal@{ transRes ->
+                            return@labelCheckForReversal when {
+                                isConnectionError(transRes.responseMessage) ->
+                                    iswPaymentProcessorObject!!.rollback(
+                                        context,
+                                        MessageReasonCode.Timeout
+                                    )
+                                wasTransactionCompletedPartially(transRes.responseCode) -> iswPaymentProcessorObject!!.rollback(
+                                    context,
+                                    MessageReasonCode.CompletedPartially
+                                )
+                                doesResponseCodeWarrantsReversal(transRes.responseCode) -> iswPaymentProcessorObject!!.rollback(
+                                    context,
+                                    MessageReasonCode.UnSpecified
+                                )
+                                else ->
+                                    Single.just(transRes)
+                            }
+                        }
+                        .flatMap {
+                            transResp = it
+                            if (it.responseCode == "A3") {
+                                Prefs.remove(PREF_CONFIG_DATA)
+                                Prefs.remove(PREF_KEYHOLDER)
+                                configureTerminal(context)
+                            }
+
+                            it.cardHolder = cardHolder
+                            it.cardLabel = cardScheme
+                            it.amount = requestData.amount
+                            lastTransactionResponse.postValue(
+                                rrn?.let { it1 -> it.copy(RRN = it1) }
+                                    ?: it
+                            )
+                            val message =
+                                (if (it.responseCode == "00") "Transaction Approved" else "Transaction Not approved")
+                            Timber.d("RESPONSE=>$it")
+                            showToast(message, context)
+                            transactionResponseDao
+                                .insertNewTransaction(it)
+                        }.flatMap {
+                            val resp: TransactionResponse = lastTransactionResponse.value!!
+                            if (resp.responseCode == "00") {
+                                updateTransactionInBackendAfterMakingPayment(
+                                    transactionToLog.transactionResponse.rrn,
+                                    mapDanbamitaleResponseToResponseWithRrn(resp, remark, rrn),
+                                    "APPROVED",
+                                    transactionTrackingTableDao
+                                )
+                            } else {
+                                updateTransactionInBackendAfterMakingPayment(
+                                    rrn = transactionToLog.transactionResponse.rrn,
+                                    transactionResponse = mapDanbamitaleResponseToResponseWithRrn(
+                                        resp,
+                                        remark = remark,
+                                        rrn
+                                    ),
+                                    status = resp.responseMessage,
+                                    transactionTrackingTableDao
+                                )
+                            }
+
+                            Single.just(mapDanbamitaleResponseToResponseWithRrn(resp, remark, rrn))
+                        }
+                }
             }
     }
 
@@ -340,13 +633,14 @@ object NetposPaymentClient {
         cardHolder: String,
         remark: String,
         transactionTrackingTableDao: TransactionTrackingTableDao,
-        rrn: String?
+        rrn: String?,
+        stan: String?
     ): Single<TransactionWithRemark?> {
         val transactionType =
             inputTransactionType?.let { TransactionType.valueOf(it) } ?: TransactionType.PURCHASE
         val params = gson.fromJson(makePaymentParams, MakePaymentParams::class.java)
         validateField(params.amount)
-        val configData: ConfigData = Singletons.getConfigData() ?: kotlin.run {
+        val configData: ConfigData = Singletons.getConfigData() ?: run {
             showToast(
                 "Terminal has not been configured, restart the application to configure",
                 context
@@ -354,7 +648,7 @@ object NetposPaymentClient {
             return Single.just(null)
         }
         val keyHolder: KeyHolder =
-            getKeyHolder() ?: kotlin.run {
+            getKeyHolder() ?: run {
                 showToast(
                     "Terminal has not been configured, restart the application to configure",
                     context
@@ -374,7 +668,8 @@ object NetposPaymentClient {
         val originalDataElements =
             OriginalDataElements(
                 originalTransactionType = transactionType,
-                originalRRN = rrn?.takeLast(12) ?: ""
+                originalRRN = rrn?.takeLast(12) ?: "",
+                originalSTAN = stan?.takeLast(6) ?: ""
             )
         val requestData =
             TransactionRequestData(
@@ -383,7 +678,8 @@ object NetposPaymentClient {
                 0L,
                 accountType = IsoAccountType.parseStringAccountType(params.accountType.name),
                 RRN = rrn?.takeLast(12),
-                originalDataElements = originalDataElements
+                originalDataElements = originalDataElements,
+                STAN = stan?.takeLast(6)
             )
 
         val transactionToLog = params.getTransactionResponseToLog(cardScheme, requestData, rrn)
@@ -486,100 +782,6 @@ object NetposPaymentClient {
             }
     }
 
-    /**
-     * @param context: Context
-     * @param rrnOfTheTransaction: String (rrn of the transaction you want to trigger reversal for)
-     * @param terminalId: String? (tid of your device), this can be null
-     * @param serializedMakePaymentParamsOfTheTransaction: String, serialized makePaymentParameter of the transaction you want to trigger reversal for
-     * @return Single<TransactionWithRemark?>
-     **/
-    private fun triggerReversalForLastTransaction(
-        context: Context,
-        rrnOfTheTransaction: String,
-        terminalId: String,
-        serializedMakePaymentParamsOfTheTransaction: String
-    ): Single<TransactionWithRemark?> {
-        val transactionTrackingTableDao =
-            AppDatabase.getDatabaseInstance(context).transactionTrackingTableDao()
-
-        val transactionType = TransactionType.REVERSAL
-        val params = gson.fromJson(
-            if (serializedMakePaymentParamsOfTheTransaction.isNotEmpty()) serializedMakePaymentParamsOfTheTransaction else lastMakePaymentParam.value,
-            MakePaymentParams::class.java
-        )
-        validateField(params.amount)
-        val configData: ConfigData = Singletons.getConfigData() ?: kotlin.run {
-            showToast(
-                "Terminal has not been configured, restart the application to configure",
-                context
-            )
-            return Single.just(null)
-        }
-        val keyHolder: KeyHolder =
-            getKeyHolder() ?: kotlin.run {
-                showToast(
-                    "Terminal has not been configured, restart the application to configure",
-                    context
-                )
-                return Single.just(null)
-            }
-
-        val hostConfig = HostConfig(
-            if (terminalId.isEmpty()) getUserData().terminalId else terminalId,
-            connectionData,
-            keyHolder,
-            configData
-        )
-
-        // IsoAccountType.
-        this.amountLong = amountDbl.toLong()
-        val originalDataElements =
-            OriginalDataElements(
-                originalTransactionType = transactionType,
-                originalRRN = rrnOfTheTransaction
-            )
-        val requestData =
-            TransactionRequestData(
-                transactionType,
-                amountLong,
-                0L,
-                accountType = IsoAccountType.parseStringAccountType(params.accountType.name),
-                RRN = rrnOfTheTransaction,
-                originalDataElements = originalDataElements
-            )
-
-        val processor = TransactionProcessor(hostConfig)
-
-        val isoMessage = processor.getIsoMessageForReversal(requestData, params.cardData)
-
-        return processor.rollback(context, MessageReasonCode.UnSpecified, isoMessage)
-            .flatMap {
-                val transRes = mapDanbamitaleResponseToResponseWithRrn(
-                    it,
-                    lastTransactionRemark.value!!,
-                    rrnOfTheTransaction
-                )
-                if (it.responseCode == "00") {
-                    updateTransactionInBackendAfterMakingPayment(
-                        rrnOfTheTransaction,
-                        transRes,
-                        "REVERSED",
-                        transactionTrackingTableDao
-                    )
-                }
-                Single.just(it)
-            }
-            .flatMap {
-                Single.just(
-                    mapDanbamitaleResponseToResponseWithRrn(
-                        it,
-                        lastTransactionRemark.value!!,
-                        rrnOfTheTransaction
-                    )
-                )
-            }
-    }
-
     private fun logTransactionToBackEndBeforeMakingPayment(dataToLog: TransactionToLogBeforeConnectingToNibbs): Single<ResponseBodyAfterLoginToBackend> {
         return stormApiService.logTransactionBeforeMakingPayment(dataToLog)
     }
@@ -644,43 +846,63 @@ object NetposPaymentClient {
         disposeDisposables()
     }
 
-    private fun getIswToken(context: Context): String {
-        Timber.d("CALLED")
+    private fun getIswToken(context: Context) {
         val req = TokenPassportRequest(context.getString(R.string.userMD), getUserData().terminalId)
-        return try {
-            var iswToken = ""
-            val disposable = CompositeDisposable()
-            disposable.add(
-                getTokenClient.getToken(req)
-                    .doOnError {
-                        Timber.d("TOKEN_ERROR==>${it.localizedMessage}")
-                    }
-                    .subscribeOn(Schedulers.io())
-                    .observeOn(AndroidSchedulers.mainThread())
-                    .subscribe { t1, t2 ->
-                        t1?.let {
-                            Timber.d("TOKEN_RESPONSE==>${it.token}")
-                            Prefs.putString(ISW_TOKEN, it.token)
-                            iswToken = it.token
-                        }
-                        t2?.let {
-                        }
-                    }
-            )
-            disposable.clear()
-            iswToken
-        } catch (e: Exception) {
-            "RUBISH"
-        }
+        getTokenClient.getToken(req)
+            .doOnError {
+                Timber.d("TOKEN_ERROR==>${it.localizedMessage}")
+            }
+            .subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe { t1, t2 ->
+                t1?.let {
+                    Timber.d("TOKEN_RESPONSE==>${it.token}")
+                    Prefs.putString(ISW_TOKEN, it.token)
+                }
+                t2?.let {
+                }
+            }.disposeWith(compositeDisposable)
+    }
+
+    private fun setUpIswToken(context: Context) {
+        val req = TokenPassportRequest(context.getString(R.string.userMD), getUserData().terminalId)
+
+        getTokenClient.getToken(req)
+            .doOnError {
+                Timber.d("$TOKEN_RESPONSE_TAG${it.localizedMessage}")
+            }
+            .subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe { t1, t2 ->
+                t1?.let {
+                    Timber.d("$TOKEN_RESPONSE_TAG${it.token}")
+                    Prefs.putString(getUserData().partnerId + TOKEN_RESPONSE_TAG, it.token)
+                }
+                t2?.let {
+                }
+            }.disposeWith(compositeDisposable)
+    }
+
+    private fun getIswTokenAtRuntime(context: Context): Single<String> {
+        val req = TokenPassportRequest(context.getString(R.string.userMD), getUserData().terminalId)
+        return getTokenClient.getToken(req)
+            .doOnError {
+                Timber.d("$TOKEN_RESPONSE_TAG${it.localizedMessage}")
+                return@doOnError
+            }
+            .flatMap {
+                Timber.d("$TOKEN_RESPONSE_TAG${it.token}")
+                Prefs.putString(getUserData().partnerId + TOKEN_RESPONSE_TAG, it.token)
+                Single.just(it.token)
+            }
     }
 
     private fun getRRn() =
         rrnApiService.getRrn()
 
     // GET THRESHOLD AMOUNT TO ROUTE USER'S TRANSACTION TO ISW
-    private fun getThreshold() {
-        val disposable = CompositeDisposable()
-        disposable.add(
+    private fun getIswThreshold() {
+        compositeDisposable.add(
             stormApiService.getPartnerInterSwitchThreshold(
                 getUserData().partnerId
             )
@@ -689,10 +911,10 @@ object NetposPaymentClient {
                 .subscribe(
                     { data ->
                         // Save the threshold to sharedPrefs
-                        Timber.d("ISW_THRESHOLD==>${Gson().toJson(data)}")
+                        Timber.d("$ISW_THRESHOLD_TAG${Gson().toJson(data)}")
                         val thresholdObjectInString = gson.toJson(data)
                         Prefs.putString(
-                            getUserData().partnerId + "iswThreshold",
+                            getUserData().partnerId + ISW_THRESHOLD_TAG,
                             thresholdObjectInString
                         )
                         _partnerThreshold.postValue(data)
@@ -702,194 +924,21 @@ object NetposPaymentClient {
                     }
                 )
         )
-        disposable.clear()
     }
 
-    /**
-     * Parse the date time gotten from the payload to this method to get the time in milliseconds and format as you like
-     *@param timeInString: String Time from the payload received after making payment
-     * @return Long which is the milliseconds equivalence of the time
-     * */
-    @RequiresApi(Build.VERSION_CODES.O)
-    fun getTimeInMilliSeconds(timeInString: String): Long {
-        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm:ss a")
-        val date: Date = sdf.parse(timeInString)!!
-        return date.time
-    }
-
-    fun getDateObject(dateInString: String): LocalDateTime? =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val pattern = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss a", Locale.ENGLISH)
-            LocalDateTime.parse(dateInString, pattern)
-        } else {
-            Timber.d("VERSION_OF_ANDROID=====>${Build.VERSION.SDK_INT}")
-            null
-        }
-
-    /**
-     * @param dateInSting: String, (dateString from the payload received back from transaction processing),
-     * @param format: String, format in which you want to get the date string back, e.g "yyyy-MM-dd'T'HH:MM:SS.T00Z"
-     * @return String, date as a string in the specified format
-     * */
-    fun formatDate(dateInString: String, format: String): String? {
-        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val pattern = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss a", Locale.ENGLISH)
-            LocalDateTime.parse(dateInString, pattern).format(pattern)
-        } else {
-            Timber.d("VERSION_OF_ANDROID=====>${Build.VERSION.SDK_INT}")
-            null
-        }
-    }
-
-    private fun processTransactionViaInterSwitchMakePayment(
-        context: Context,
-        inputTransactionType: String? = null,
-        terminalId: String? = "",
-        makePaymentParams: String,
-        cardScheme: String,
-        cardHolder: String,
-        remark: String,
-        transactionTrackingTableDao: TransactionTrackingTableDao,
-        rrn: String?
-    ): Single<TransactionWithRemark?> {
-        val customRrn = generateRandomRrn(12)
-        val params = gson.fromJson(makePaymentParams, MakePaymentParams::class.java)
-        val transactionType =
-            inputTransactionType?.let { TransactionType.valueOf(it) } ?: TransactionType.PURCHASE
-
-        val configData: ConfigData = Singletons.getConfigData() ?: run {
-            showToast(
-                "Terminal has not been configured, restart the application to configure",
-                context
-            )
-            return Single.just(null)
-        }
-
-        val keyHolder = getKeyHolder()
-
-        getIswToken(context)
-        getThreshold()
-
-        // IsoAccountType.
-        this.amountLong = amountDbl.toLong()
-        val requestData =
-            TransactionRequestData(
-                transactionType,
-                amountLong,
-                0L,
-                accountType = IsoAccountType.valueOf(params.accountType.name),
-                RRN = rrn
-            )
-
-        if (Prefs.getString(getUserData().partnerId + "iswThreshold", "")
-            .isEmpty()
-        ) {
-            Toast.makeText(context, "Unable to identify partner", Toast.LENGTH_LONG).show()
-        }
-        val interSwitchObject =
-            Prefs.getString(getUserData().partnerId + "iswThreshold", "")
-        val destinationAcc = if (interSwitchObject.isNotEmpty()) gson.fromJson(
-            interSwitchObject,
-            GetPartnerInterSwitchThresholdResponse::class.java
-        ).bankAccountNumber else {
-            getIswToken(context)
-            getThreshold()
-            _partnerThreshold.value?.bankAccountNumber ?: ""
-        }
-
-        Timber.d("DATA_DESTINATION==>$destinationAcc")
-        Timber.d("DATA_INTERSWITCH==>$interSwitchObject")
-        if (destinationAcc.isNullOrEmpty()) {
-            Toast.makeText(context, "No destination account found", Toast.LENGTH_LONG).show()
-        }
-
-        val iswParam = IswParameters(
-            context.getString(R.string.userMD),
-            user?.business_address ?: "",
-            token = Prefs.getString(ISW_TOKEN, "error2"),
-            "",
-            terminalId = getUserData().terminalId,
-            terminalSerial = getUserData().terminalSerialNumber,
-            destinationAcc
+    private fun getIswThresholdAtRunTime(): Single<GetPartnerInterSwitchThresholdResponse?> {
+        return stormApiService.getPartnerInterSwitchThreshold(
+            getUserData().partnerId
         )
-
-        requestData.iswParameters = iswParam
-
-        iswPaymentProcessorObject =
-            TransactionProcessorWrapper(
-                context.getString(R.string.userMD),
-                getUserData().terminalId,
-                requestData.amount,
-                transactionRequestData = requestData,
-                keyHolder = keyHolder,
-                configData = configData
-            )
-
-        val transactionToLog = params.getTransactionResponseToLog(cardScheme, requestData, rrn)
-
-        // Send to backend first
-        logTransactionToBackEndBeforeMakingPayment(transactionToLog)
-        return params.cardData.let { cardData ->
-            iswPaymentProcessorObject!!.processIswTransaction(cardData)
-                .flatMap labelCheckForReversal@{ transRes ->
-                    return@labelCheckForReversal when {
-                        isConnectionError(transRes.responseMessage) ->
-                            iswPaymentProcessorObject!!.rollback(context, MessageReasonCode.Timeout)
-                        wasTransactionCompletedPartially(transRes.responseCode) -> iswPaymentProcessorObject!!.rollback(
-                            context,
-                            MessageReasonCode.CompletedPartially
-                        )
-                        doesResponseCodeWarrantsReversal(transRes.responseCode) -> iswPaymentProcessorObject!!.rollback(
-                            context,
-                            MessageReasonCode.UnSpecified
-                        )
-                        else ->
-                            Single.just(transRes)
-                    }
-                }
-                .flatMap {
-                    transResp = it
-                    if (it.responseCode == "A3") {
-                        Prefs.remove(PREF_CONFIG_DATA)
-                        Prefs.remove(PREF_KEYHOLDER)
-                        configureTerminal(context)
-                    }
-
-                    it.cardHolder = cardHolder
-                    it.cardLabel = cardScheme
-                    it.amount = requestData.amount
-                    lastTransactionResponse.postValue(rrn?.let { it1 -> it.copy(RRN = it1) } ?: it)
-                    val message =
-                        (if (it.responseCode == "00") "Transaction Approved" else "Transaction Not approved")
-                    Timber.d("RESPONSE=>$it")
-                    showToast(message, context)
-                    transactionResponseDao
-                        .insertNewTransaction(it)
-                }.flatMap {
-                    val resp: TransactionResponse = lastTransactionResponse.value!!
-                    if (resp.responseCode == "00") {
-                        updateTransactionInBackendAfterMakingPayment(
-                            transactionToLog.transactionResponse.rrn,
-                            mapDanbamitaleResponseToResponseWithRrn(resp, remark, rrn),
-                            "APPROVED",
-                            transactionTrackingTableDao
-                        )
-                    } else {
-                        updateTransactionInBackendAfterMakingPayment(
-                            rrn = transactionToLog.transactionResponse.rrn,
-                            transactionResponse = mapDanbamitaleResponseToResponseWithRrn(
-                                resp,
-                                remark = remark,
-                                rrn
-                            ),
-                            status = resp.responseMessage,
-                            transactionTrackingTableDao
-                        )
-                    }
-
-                    Single.just(mapDanbamitaleResponseToResponseWithRrn(resp, remark, rrn))
-                }
-        }
+            .flatMap { data ->
+                Timber.d("$ISW_THRESHOLD_TAG${Gson().toJson(data)}")
+                val thresholdObjectInString = gson.toJson(data)
+                Prefs.putString(
+                    getUserData().partnerId + ISW_THRESHOLD_TAG,
+                    thresholdObjectInString
+                )
+                Single.just(data)
+            }
     }
 
     /**
@@ -950,5 +999,12 @@ object NetposPaymentClient {
 
                 Single.just(response)
             }
+    }
+
+    /**
+     This message should be called on the ondestroy method of the lifecycle owner (Fragment or activity) where this class, NetposPaymentClient, is used
+     * */
+    fun finish() {
+        compositeDisposable.clear()
     }
 }

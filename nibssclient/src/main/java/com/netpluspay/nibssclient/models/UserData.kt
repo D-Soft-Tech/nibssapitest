@@ -11,5 +11,8 @@ data class UserData(
     var terminalId: String,
     var terminalSerialNumber: String,
     var businessAddress: String,
-    var customerName: String
+    var customerName: String,
+    val mid: String,
+    val institutionalCode: String,
+    val bankAccountNumber: String
 ) : Parcelable

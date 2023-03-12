@@ -19,13 +19,5 @@ class AppClass : Application() {
             .setUseDefaultSharedPreference(true)
             .build()
         Timber.plant(Timber.DebugTree())
-        NetPosSdk.init()
-        val terminalParameters = TerminalParameters()
-        terminalParameters.merchantCode = "3099"
-        terminalParameters.merchantName = "NetPlus"
-        terminalParameters.merchantId = "2033LAGPOOO7885"
-        terminalParameters.terminalId = "2044EZVH"
-        loadEmvParams(terminalParameters)
-        loadProvidedCapksAndAids()
     }
 }

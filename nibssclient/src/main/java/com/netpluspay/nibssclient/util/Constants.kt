@@ -90,6 +90,8 @@ object Constants {
     const val VEND_PROD_PORT = 3535
     const val TRANSACTION_LAST_LOADED_PAGE = "transaction_last_loaded_page"
     const val PREF_REPRINT_PASSWORD = "reprint_password"
+    const val ISW_THRESHOLD_TAG = "ISW_THRESHOLD_TAG==>"
+    const val TOKEN_RESPONSE_TAG = "TOKEN_RESPONSE_TAG==>"
 
     // ======= Copied from netpos ====== //
     fun getDownloadParameterManagementData(mgtCode: String, mainString: String): String {

@@ -6,7 +6,10 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import com.danbamitale.epmslib.entities.* // ktlint-disable no-wildcard-imports
+import com.danbamitale.epmslib.entities.CardData
+import com.danbamitale.epmslib.entities.KeyHolder
+import com.danbamitale.epmslib.entities.clearPinKey
+import com.danbamitale.epmslib.entities.clearSessionKey
 import com.google.gson.Gson
 import com.netpluspay.netpossdk.NetPosSdk
 import com.netpluspay.netpossdk.emv.CardReadResult
@@ -17,6 +20,7 @@ import com.netpluspay.nibssclient.models.IsoAccountType
 import com.netpluspay.nibssclient.models.MakePaymentParams
 import com.netpluspay.nibssclient.models.UserData
 import com.netpluspay.nibssclient.service.NetposPaymentClient
+import com.netpluspay.nibssclient.util.Constants.DEFAULT_TERMINAL_ID
 import com.netpluspay.nibssclient.work.ModelObjects.disposeWith
 import com.pixplicity.easyprefs.library.Prefs
 import com.pos.sdk.emvcore.POIEmvCoreManager
@@ -45,11 +49,14 @@ class MainActivity : AppCompatActivity() {
         userData = UserData(
             businessName = "Netplus",
             partnerName = "Netplus",
-            partnerId = "5de231d9-1be0-4c31-8658-6e15892f2b83",
-            terminalId = "2033ALZP",
-            terminalSerialNumber = NetPosSdk.getDeviceSerial(),
+            partnerId = "9E89FFBD-9968-4F69-96DB-4E1250F14D55",
+            terminalId = "2033ALWE",
+            terminalSerialNumber = "1142016190002868" /*NetPosSdk.getDeviceSerial()*/,
             businessAddress = "Marwa Lagos",
-            customerName = "Test Account"
+            customerName = "Test Account",
+            mid = "2033LAGPOOO7885",
+            bankAccountNumber = "0169422762",
+            institutionalCode = "627787"
         )
 
         callHomeButton.setOnClickListener {
@@ -82,22 +89,6 @@ class MainActivity : AppCompatActivity() {
                 cardData = cardData!!,
                 accountType = IsoAccountType.SAVINGS
             )
-//            NewNibssApiWrapper.triggerReversalForLastTransaction(
-//                this,
-//                reversalRrn.text.toString(),
-//                userData.terminalId,
-//                Gson().toJson(makePaymentParams)
-//            ).subscribeOn(Schedulers.io())
-//                .observeOn(AndroidSchedulers.mainThread())
-//                .subscribe { t1, t2 ->
-//                    t1?.let {
-//                        Toast.makeText(this, Gson().toJson(it), Toast.LENGTH_LONG).show()
-//                        Timber.d("REVERSAL_RESPONSE====>%s", Gson().toJson(it))
-//                    }
-//                    t2?.let {
-//                        Timber.d("REVERSAL_ERROR====>%s", it.localizedMessage)
-//                    }
-//                }.disposeWith(compositeDisposable)
         }
 
         netposPaymentClient.logUser(this, Gson().toJson(userData))
@@ -195,13 +186,15 @@ class MainActivity : AppCompatActivity() {
                             }
                         cardResult.cardScheme?.let { it1 ->
                             cardResult.cardHolderName?.let { it2 ->
-                                netposPaymentClient.makePayment(
+                                netposPaymentClient.makePayment2(
                                     this,
-                                    userData.terminalId,
+                                    null,
                                     Gson().toJson(makePaymentParams),
                                     it1,
                                     it2,
-                                    "TestingAgain"
+                                    "TestingAgain",
+                                    "",
+                                    ""
                                 ).subscribeOn(Schedulers.io())
                                     .doOnError { error ->
                                         Timber.d("ERROR_THAT_HAPPENED===>%s", Gson().toJson(error))
