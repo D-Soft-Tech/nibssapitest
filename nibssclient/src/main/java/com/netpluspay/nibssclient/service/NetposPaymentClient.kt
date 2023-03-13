@@ -966,7 +966,7 @@ object NetposPaymentClient {
         val requestData =
             TransactionRequestData(
                 TransactionType.BALANCE,
-                amount = 0L,
+                amount = 15L,
                 accountType = IsoAccountType.parseStringAccountType(accountType)
             )
 

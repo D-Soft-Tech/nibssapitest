@@ -1,7 +1,7 @@
 <resources>
     <string name="app_name">NibssApiTest</string>
     <string name="enter_amount">Enter Amount</string>
-    <string name="make_payment">Make Payment!</string>
+    <string name="make_payment">Make Payment</string>
     <string name="configure">Configure</string>
     <string name="trigger_reversal">Trigger Reversal</string>
     <string name="call_home">Call Home</string>
@@ -14,4 +14,5 @@
     <string name="enter_valid_amount">Enter a valid amount</string>
     <string name="check_balance">Check balance</string>
     <string name="checking_balance">Enquiring balance…</string>
+    <string name="amount_can_not_be_less_than_15">Amount can not be less than 15 naira</string>
 </resources>

@@ -15,7 +15,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.NibssApiTest">
         <activity
-            android:name=".ContactlessPaymentActivity"
+            android:name=".presentation.dialog.activities.MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
