@@ -21,7 +21,7 @@ object AppConstant {
         businessName = "Netplus",
         partnerName = "Netplus",
         partnerId = "9E89FFBD-9968-4F69-96DB-4E1250F14D55",
-        terminalId = "2033ALWE",
+        terminalId = "2033ALZP",
         terminalSerialNumber = "1142016190002868", // getDeviceSerialNumber(),
         businessAddress = "Marwa Lagos",
         customerName = "Test Account",

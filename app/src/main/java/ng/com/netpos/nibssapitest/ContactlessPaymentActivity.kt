@@ -209,6 +209,7 @@ class ContactlessPaymentActivity : AppCompatActivity() {
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe { data, error ->
                     data?.let { response ->
+                        Timber.d("%s%s", TAG_TERMINAL_CONFIGURATION, gson.toJson(response))
                         Toast.makeText(
                             this,
                             getString(R.string.terminal_configured),
