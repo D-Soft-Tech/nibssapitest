@@ -11,6 +11,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import com.danbamitale.epmslib.entities.CardData
 import com.danbamitale.epmslib.entities.clearPinKey
+import com.danbamitale.epmslib.extensions.formatCurrencyAmount
 import com.google.gson.Gson
 import com.netpluspay.contactless.sdk.start.ContactlessSdk
 import com.netpluspay.contactless.sdk.utils.ContactlessReaderResult
@@ -29,11 +30,13 @@ import ng.com.netpos.nibssapitest.AppConstant.KEY_HOLDER
 import ng.com.netpos.nibssapitest.AppConstant.PAYMENT_ERROR_DATA_TAG
 import ng.com.netpos.nibssapitest.AppConstant.PAYMENT_SUCCESS_DATA_TAG
 import ng.com.netpos.nibssapitest.AppConstant.POS_ENTRY_MODE
+import ng.com.netpos.nibssapitest.AppConstant.TAG_CHECK_BALANCE
 import ng.com.netpos.nibssapitest.AppConstant.TAG_MAKE_PAYMENT
 import ng.com.netpos.nibssapitest.AppConstant.TAG_TERMINAL_CONFIGURATION
 import ng.com.netpos.nibssapitest.AppConstant.getSampleUserData
 import ng.com.netpos.nibssapitest.AppConstant.getSavedKeyHolder
 import ng.com.netpos.nibssapitest.data.models.CardResult
+import ng.com.netpos.nibssapitest.data.models.Status
 import ng.com.netpos.nibssapitest.presentation.dialog.LoadingDialog
 import timber.log.Timber
 
@@ -43,6 +46,7 @@ class ContactlessPaymentActivity : AppCompatActivity() {
     private var previousAmount: Long? = null
     private var userData: UserData = getSampleUserData()
     private lateinit var makePaymentButton: Button
+    private lateinit var balanceEnquiryButton: Button
     private lateinit var resultViewerTextView: TextView
     private lateinit var amountET: EditText
     var netposPaymentClient: NetposPaymentClient = NetposPaymentClient
@@ -56,6 +60,27 @@ class ContactlessPaymentActivity : AppCompatActivity() {
                     val cardReadData = i.getStringExtra("data")!!
                     val cardResult = gson.fromJson(cardReadData, CardResult::class.java)
                     makePayment(cardResult, amountToPay)
+                }
+            }
+            if (result.resultCode == ContactlessReaderResult.RESULT_ERROR) {
+                data?.let { i ->
+                    val error = i.getStringExtra("data")
+                    error?.let {
+                        Timber.d("ERROR_TAG===>%s", it)
+                        resultViewerTextView.text = it
+                    }
+                }
+            }
+        }
+
+    private val checkBalanceResultLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            val data: Intent? = result.data
+            if (result.resultCode == ContactlessReaderResult.RESULT_OK) {
+                data?.let { i ->
+                    val cardReadData = i.getStringExtra("data")!!
+                    val cardResult = gson.fromJson(cardReadData, CardResult::class.java)
+                    checkBalance(cardResult)
                 }
             }
             if (result.resultCode == ContactlessReaderResult.RESULT_ERROR) {
@@ -85,6 +110,10 @@ class ContactlessPaymentActivity : AppCompatActivity() {
             val amountToPay = amountET.text.toString().toLong().toDouble()
 
             launchContactless(makePaymentResultLauncher, amountToPay)
+        }
+
+        balanceEnquiryButton.setOnClickListener {
+            launchContactless(checkBalanceResultLauncher, 200.0)
         }
     }
 
@@ -165,6 +194,7 @@ class ContactlessPaymentActivity : AppCompatActivity() {
 
     private fun initializeViews() {
         makePaymentButton = findViewById(R.id.read_card_btn)
+        balanceEnquiryButton = findViewById(R.id.check_balance_btn)
         resultViewerTextView = findViewById(R.id.result_tv)
         amountET = findViewById(R.id.amountToPay)
     }
@@ -174,7 +204,7 @@ class ContactlessPaymentActivity : AppCompatActivity() {
         loaderDialog.loadingMessage = getString(R.string.configuring_terminal)
         loaderDialog.show(supportFragmentManager, TAG_TERMINAL_CONFIGURATION)
         compositeDisposable.add(
-            netposPaymentClient.init(this, false, Gson().toJson(userData))
+            netposPaymentClient.init(this, Gson().toJson(userData))
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe { data, error ->
@@ -201,6 +231,43 @@ class ContactlessPaymentActivity : AppCompatActivity() {
                         ).show()
                         loaderDialog.dismiss()
                         Timber.d("%s%s", ERROR_TAG, it.localizedMessage)
+                    }
+                }
+        )
+    }
+
+    private fun checkBalance(cardResult: CardResult) {
+        val loaderDialog: LoadingDialog = LoadingDialog()
+        loaderDialog.loadingMessage = getString(R.string.checking_balance)
+        loaderDialog.show(supportFragmentManager, TAG_CHECK_BALANCE)
+        val cardData = cardResult.cardReadResult.let {
+            CardData(it.track2Data, it.iccString, it.pan, POS_ENTRY_MODE).also { cardD ->
+                cardD.pinBlock = it.pinBlock
+            }
+        }
+        compositeDisposable.add(
+            netposPaymentClient.balanceEnquiry(this, cardData, IsoAccountType.SAVINGS.name)
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe { data, error ->
+                    data?.let {
+                        loaderDialog.dismiss()
+                        val responseString = if (it.responseCode == Status.APPROVED.statusCode) {
+                            "Response: APPROVED\nResponse Code: ${it.responseCode}\n\nAccount Balance:\n" + it.accountBalances.joinToString(
+                                "\n"
+                            ) { accountBalance ->
+                                "${accountBalance.accountType}: ${
+                                accountBalance.amount.div(100).formatCurrencyAmount()
+                                }"
+                            }
+                        } else {
+                            "Response: ${it.responseMessage}\nResponse Code: ${it.responseCode}"
+                        }
+                        resultViewerTextView.text = responseString
+                    }
+                    error?.let {
+                        loaderDialog.dismiss()
+                        resultViewerTextView.text = it.localizedMessage
                     }
                 }
         )

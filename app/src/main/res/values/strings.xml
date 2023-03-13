@@ -5,11 +5,13 @@
     <string name="configure">Configure</string>
     <string name="trigger_reversal">Trigger Reversal</string>
     <string name="call_home">Call Home</string>
-    <string name="processing_payment">Payment processing...</string>
+    <string name="processing_payment">Payment processing…</string>
     <string name="your_response_will_appear_here">Your response will apear here</string>
-    <string name="configuring_terminal">Configuring terminal...</string>
+    <string name="configuring_terminal">Configuring terminal…</string>
     <string name="terminal_configured">Terminal configured successfully</string>
     <string name="terminal_config_failed">Terminal configuration failed</string>
     <string name="terminal_not_configured">Terminal not configured</string>
     <string name="enter_valid_amount">Enter a valid amount</string>
+    <string name="check_balance">Check balance</string>
+    <string name="checking_balance">Enquiring balance…</string>
 </resources>

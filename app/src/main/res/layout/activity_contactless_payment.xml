@@ -32,10 +32,22 @@
             android:layout_height="wrap_content"
             android:layout_margin="@dimen/dimen_20dp"
             android:text="@string/make_payment"
-            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/check_balance_btn"
             app:layout_constraintHorizontal_bias="0.5"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/amountToPay" />
+
+        <Button
+            android:id="@+id/check_balance_btn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="@dimen/dimen_20dp"
+            android:text="@string/check_balance"
+            app:layout_constraintBottom_toBottomOf="@+id/read_card_btn"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_bias="0.5"
+            app:layout_constraintStart_toEndOf="@+id/read_card_btn"
+            app:layout_constraintTop_toTopOf="@+id/read_card_btn" />
 
         <androidx.core.widget.NestedScrollView
             android:layout_width="0dp"
