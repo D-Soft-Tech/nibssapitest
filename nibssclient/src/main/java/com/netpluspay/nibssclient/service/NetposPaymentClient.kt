@@ -877,7 +877,7 @@ object NetposPaymentClient {
      * @param accountType
      * @return CheckAccountBalanceResponse
      * */
-    fun balanceEnquiry(
+    private fun balanceEnquiry(
         context: Context,
         cardData: CardData,
         accountType: String

@@ -80,7 +80,7 @@ class ContactlessPaymentActivity : AppCompatActivity() {
                 data?.let { i ->
                     val cardReadData = i.getStringExtra("data")!!
                     val cardResult = gson.fromJson(cardReadData, CardResult::class.java)
-                    checkBalance(cardResult)
+//                    checkBalance(cardResult)
                 }
             }
             if (result.resultCode == ContactlessReaderResult.RESULT_ERROR) {
@@ -237,40 +237,40 @@ class ContactlessPaymentActivity : AppCompatActivity() {
         )
     }
 
-    private fun checkBalance(cardResult: CardResult) {
-        val loaderDialog: LoadingDialog = LoadingDialog()
-        loaderDialog.loadingMessage = getString(R.string.checking_balance)
-        loaderDialog.show(supportFragmentManager, TAG_CHECK_BALANCE)
-        val cardData = cardResult.cardReadResult.let {
-            CardData(it.track2Data, it.iccString, it.pan, POS_ENTRY_MODE).also { cardD ->
-                cardD.pinBlock = it.pinBlock
-            }
-        }
-        compositeDisposable.add(
-            netposPaymentClient.balanceEnquiry(this, cardData, IsoAccountType.SAVINGS.name)
-                .subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe { data, error ->
-                    data?.let {
-                        loaderDialog.dismiss()
-                        val responseString = if (it.responseCode == Status.APPROVED.statusCode) {
-                            "Response: APPROVED\nResponse Code: ${it.responseCode}\n\nAccount Balance:\n" + it.accountBalances.joinToString(
-                                "\n"
-                            ) { accountBalance ->
-                                "${accountBalance.accountType}: ${
-                                accountBalance.amount.div(100).formatCurrencyAmount()
-                                }"
-                            }
-                        } else {
-                            "Response: ${it.responseMessage}\nResponse Code: ${it.responseCode}"
-                        }
-                        resultViewerTextView.text = responseString
-                    }
-                    error?.let {
-                        loaderDialog.dismiss()
-                        resultViewerTextView.text = it.localizedMessage
-                    }
-                }
-        )
-    }
+//    private fun checkBalance(cardResult: CardResult) {
+//        val loaderDialog: LoadingDialog = LoadingDialog()
+//        loaderDialog.loadingMessage = getString(R.string.checking_balance)
+//        loaderDialog.show(supportFragmentManager, TAG_CHECK_BALANCE)
+//        val cardData = cardResult.cardReadResult.let {
+//            CardData(it.track2Data, it.iccString, it.pan, POS_ENTRY_MODE).also { cardD ->
+//                cardD.pinBlock = it.pinBlock
+//            }
+//        }
+//        compositeDisposable.add(
+//            netposPaymentClient.balanceEnquiry(this, cardData, IsoAccountType.SAVINGS.name)
+//                .subscribeOn(Schedulers.io())
+//                .observeOn(AndroidSchedulers.mainThread())
+//                .subscribe { data, error ->
+//                    data?.let {
+//                        loaderDialog.dismiss()
+//                        val responseString = if (it.responseCode == Status.APPROVED.statusCode) {
+//                            "Response: APPROVED\nResponse Code: ${it.responseCode}\n\nAccount Balance:\n" + it.accountBalances.joinToString(
+//                                "\n"
+//                            ) { accountBalance ->
+//                                "${accountBalance.accountType}: ${
+//                                accountBalance.amount.div(100).formatCurrencyAmount()
+//                                }"
+//                            }
+//                        } else {
+//                            "Response: ${it.responseMessage}\nResponse Code: ${it.responseCode}"
+//                        }
+//                        resultViewerTextView.text = responseString
+//                    }
+//                    error?.let {
+//                        loaderDialog.dismiss()
+//                        resultViewerTextView.text = it.localizedMessage
+//                    }
+//                }
+//        )
+//    }
 }

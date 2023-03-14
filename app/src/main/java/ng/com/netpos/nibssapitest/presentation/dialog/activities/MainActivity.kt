@@ -28,6 +28,7 @@ import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
 import ng.com.netpos.nibssapitest.AppConstant
+import ng.com.netpos.nibssapitest.AppConstant.PAYMENT_SUCCESS_DATA_TAG
 import ng.com.netpos.nibssapitest.AppConstant.TAG_CHECK_BALANCE
 import ng.com.netpos.nibssapitest.AppConstant.getSampleUserData
 import ng.com.netpos.nibssapitest.R
@@ -158,7 +159,7 @@ class MainActivity : AppCompatActivity() {
                                 editAmount.text.toString().toLong().times(100)
                             )
                         } else {
-                            checkBalance(it.data)
+//                            checkBalance(it.data)
                         }
                     }
                 }
@@ -201,7 +202,7 @@ class MainActivity : AppCompatActivity() {
                         loaderDialog.dismiss()
                         resultViewerTextView.text = gson.toJson(transactionWithRemark)
                         Timber.d(
-                            "${AppConstant.PAYMENT_SUCCESS_DATA_TAG}%s",
+                            "$PAYMENT_SUCCESS_DATA_TAG%s",
                             gson.toJson(transactionWithRemark)
                         )
                     },
@@ -217,43 +218,43 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    private fun checkBalance(cardReadResult: CardReadResult): Disposable {
-        val loaderDialog: LoadingDialog = LoadingDialog()
-        loaderDialog.loadingMessage = getString(R.string.checking_balance)
-        loaderDialog.show(supportFragmentManager, TAG_CHECK_BALANCE)
-        val cardData = cardReadResult.let {
-            CardData(
-                it.track2Data!!,
-                it.nibssIccSubset,
-                it.applicationPANSequenceNumber!!,
-                AppConstant.POS_ENTRY_MODE
-            ).also { cardD ->
-                cardD.pinBlock = it.encryptedPinBlock
-            }
-        }
-        return netposPaymentClient.balanceEnquiry(this, cardData, IsoAccountType.SAVINGS.name)
-            .subscribeOn(Schedulers.io())
-            .observeOn(AndroidSchedulers.mainThread())
-            .subscribe { data, error ->
-                data?.let {
-                    loaderDialog.dismiss()
-                    val responseString = if (it.responseCode == Status.APPROVED.statusCode) {
-                        "Response: APPROVED\nResponse Code: ${it.responseCode}\n\nAccount Balance:\n" + it.accountBalances.joinToString(
-                            "\n"
-                        ) { accountBalance ->
-                            "${accountBalance.accountType}: ${
-                            accountBalance.amount.div(100).formatCurrencyAmount()
-                            }"
-                        }
-                    } else {
-                        "Response: ${it.responseMessage}\nResponse Code: ${it.responseCode}"
-                    }
-                    resultViewerTextView.text = responseString
-                }
-                error?.let {
-                    loaderDialog.dismiss()
-                    resultViewerTextView.text = it.localizedMessage
-                }
-            }
-    }
+//    private fun checkBalance(cardReadResult: CardReadResult): Disposable {
+//        val loaderDialog: LoadingDialog = LoadingDialog()
+//        loaderDialog.loadingMessage = getString(R.string.checking_balance)
+//        loaderDialog.show(supportFragmentManager, TAG_CHECK_BALANCE)
+//        val cardData = cardReadResult.let {
+//            CardData(
+//                it.track2Data!!,
+//                it.nibssIccSubset,
+//                it.applicationPANSequenceNumber!!,
+//                AppConstant.POS_ENTRY_MODE
+//            ).also { cardD ->
+//                cardD.pinBlock = it.encryptedPinBlock
+//            }
+//        }
+//        return netposPaymentClient.balanceEnquiry(this, cardData, IsoAccountType.SAVINGS.name)
+//            .subscribeOn(Schedulers.io())
+//            .observeOn(AndroidSchedulers.mainThread())
+//            .subscribe { data, error ->
+//                data?.let {
+//                    loaderDialog.dismiss()
+//                    val responseString = if (it.responseCode == Status.APPROVED.statusCode) {
+//                        "Response: APPROVED\nResponse Code: ${it.responseCode}\n\nAccount Balance:\n" + it.accountBalances.joinToString(
+//                            "\n"
+//                        ) { accountBalance ->
+//                            "${accountBalance.accountType}: ${
+//                            accountBalance.amount.div(100).formatCurrencyAmount()
+//                            }"
+//                        }
+//                    } else {
+//                        "Response: ${it.responseMessage}\nResponse Code: ${it.responseCode}"
+//                    }
+//                    resultViewerTextView.text = responseString
+//                }
+//                error?.let {
+//                    loaderDialog.dismiss()
+//                    resultViewerTextView.text = it.localizedMessage
+//                }
+//            }
+//    }
 }
