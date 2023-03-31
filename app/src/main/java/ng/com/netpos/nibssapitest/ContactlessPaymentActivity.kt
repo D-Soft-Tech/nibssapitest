@@ -11,7 +11,6 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import com.danbamitale.epmslib.entities.CardData
 import com.danbamitale.epmslib.entities.clearPinKey
-import com.danbamitale.epmslib.extensions.formatCurrencyAmount
 import com.google.gson.Gson
 import com.netpluspay.contactless.sdk.start.ContactlessSdk
 import com.netpluspay.contactless.sdk.utils.ContactlessReaderResult
@@ -30,13 +29,11 @@ import ng.com.netpos.nibssapitest.AppConstant.KEY_HOLDER
 import ng.com.netpos.nibssapitest.AppConstant.PAYMENT_ERROR_DATA_TAG
 import ng.com.netpos.nibssapitest.AppConstant.PAYMENT_SUCCESS_DATA_TAG
 import ng.com.netpos.nibssapitest.AppConstant.POS_ENTRY_MODE
-import ng.com.netpos.nibssapitest.AppConstant.TAG_CHECK_BALANCE
 import ng.com.netpos.nibssapitest.AppConstant.TAG_MAKE_PAYMENT
 import ng.com.netpos.nibssapitest.AppConstant.TAG_TERMINAL_CONFIGURATION
 import ng.com.netpos.nibssapitest.AppConstant.getSampleUserData
 import ng.com.netpos.nibssapitest.AppConstant.getSavedKeyHolder
 import ng.com.netpos.nibssapitest.data.models.CardResult
-import ng.com.netpos.nibssapitest.data.models.Status
 import ng.com.netpos.nibssapitest.presentation.dialog.LoadingDialog
 import timber.log.Timber
 

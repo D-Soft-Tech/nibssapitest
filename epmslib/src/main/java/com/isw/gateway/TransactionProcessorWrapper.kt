@@ -7,6 +7,8 @@ import com.danbamitale.epmslib.entities.* // ktlint-disable no-wildcard-imports
 import com.danbamitale.epmslib.processors.TransactionProcessor
 import com.danbamitale.epmslib.tlv.TLVList
 import com.danbamitale.epmslib.utils.* // ktlint-disable no-wildcard-imports
+import com.danbamitale.epmslib.utils.Utility.POS_VAS_NIBSS_DEFAULT_IP
+import com.danbamitale.epmslib.utils.Utility.POS_VAS_NIBSS_DEFAULT_PORT
 import com.google.gson.Gson
 import com.isw.iswclient.iswapiclient.iswTransactionClient
 import com.isw.iswclient.request.ISW_ONLY_STRATEGY
@@ -28,17 +30,22 @@ class TransactionProcessorWrapper @JvmOverloads constructor(
     var keyHolder: KeyHolder? = null,
     var configData: ConfigData? = null
 ) {
-    private val posvas_ip: String = "196.6.103.10"
-    private val posvas_port = 55533
+    init {
+        System.loadLibrary("api-keys")
+    }
+    private val posVasIp: String = getIp()
+    private val posVasPort = getPort().toInt()
     private lateinit var transactionRoute: TransactionRoute
     private lateinit var transactionProcessor: TransactionProcessor
     private var attempt = 0
+
+    private external fun getIp(): String
+    private external fun getPort(): String
 
     fun processIswTransaction(
         cardData: CardData
     ): Single<TransactionResponse> =
         Single.fromCallable {
-            Log.d("TRANS_DATA3", "CALLED3")
             attempt++
             if (transactionRequestData!!.iswParameters == null) {
                 println("interswitch parameter is null")
@@ -220,12 +227,12 @@ class TransactionProcessorWrapper @JvmOverloads constructor(
 
     private fun getConnectionData(posMode: PosMode): ConnectionData {
         return if (posMode === PosMode.POSVAS) ConnectionData(
-            posvas_ip,
-            posvas_port,
+            posVasIp,
+            posVasPort,
             true
         ) else ConnectionData(
-            DEFAULT_NIBSS_IP,
-            DEFAULT_NIBSS_PORT,
+            POS_VAS_NIBSS_DEFAULT_IP,
+            POS_VAS_NIBSS_DEFAULT_PORT,
             true
         )
     }

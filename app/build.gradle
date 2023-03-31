@@ -83,6 +83,12 @@ android {
         exclude 'kotlin/ranges/ranges.kotlin_builtins'
         exclude 'kotlin/coroutines/coroutines.kotlin_builtins'
     }
+    ndkVersion '21.3.6528147'
+    externalNativeBuild {
+        ndkBuild {
+            path file('src/main/jni/Android.mk')
+        }
+    }
 }
 
 dependencies {

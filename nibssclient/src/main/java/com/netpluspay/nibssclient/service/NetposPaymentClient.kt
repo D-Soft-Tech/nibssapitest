@@ -61,10 +61,6 @@ import retrofit2.Response
 import timber.log.Timber
 import java.util.concurrent.TimeUnit
 
-private const val CONFIGURATION_STATUS = "terminal_configuration_status"
-private const val CONFIGURATION_ACTION = "com.woleapp.netpos.TERMINAL_CONFIGURATION"
-private const val DEFAULT_TERMINAL_ID = "2057H63U"
-
 object NetposPaymentClient {
     private var transactionResponseDao: TransactionResponseDao? = null
     private lateinit var workManager: WorkManager
@@ -79,7 +75,7 @@ object NetposPaymentClient {
     private var connectionData: ConnectionData = ConnectionData(
         ipAddress = configurationData.ip,
         ipPort = configurationData.port.toInt(),
-        isSSL = true
+        isSSL = true,
     )
     private var terminalId: String? = null
     private var currentlyLoggedInUser: UserData? = null
@@ -140,7 +136,7 @@ object NetposPaymentClient {
      * */
     fun init(
         context: Context,
-        serializedUserData: String
+        serializedUserData: String,
     ): Single<Pair<KeyHolder?, ConfigData?>> {
         // Repush failed transactions back to server
         workManager = WorkManager.getInstance(context.applicationContext)
@@ -156,7 +152,7 @@ object NetposPaymentClient {
 
         KeyHolder.setHostKeyComponents(
             configurationData.key1,
-            configurationData.key2
+            configurationData.key2,
         ) // default to test  //Set your base keys here
         keyHolder = getKeyHolder()
         configData = Singletons.getConfigData()
@@ -180,12 +176,14 @@ object NetposPaymentClient {
             context,
             getTerminalId(),
             keyHolder?.clearSessionKey ?: "",
-            currentlyLoggedInUser!!.terminalSerialNumber
+            currentlyLoggedInUser!!.terminalSerialNumber,
         ).flatMap {
             Timber.e("call home result $it")
             if (it == "00") {
                 return@flatMap Single.just(Pair(null, null))
-            } else Single.error(Exception("call home failed"))
+            } else {
+                Single.error(Exception("call home failed"))
+            }
         }
     }
 
@@ -203,12 +201,12 @@ object NetposPaymentClient {
         context: Context,
         terminalId: String,
         keyHolderClearSessionKey: String,
-        terminalSerialNumber: String
+        terminalSerialNumber: String,
     ): Single<String> = terminalConfigurator.nibssCallHome(
         context,
         terminalId,
         keyHolderClearSessionKey,
-        terminalSerialNumber
+        terminalSerialNumber,
     )
 
     private fun configureTerminal(context: Context): Single<Pair<KeyHolder?, ConfigData?>> {
@@ -223,7 +221,7 @@ object NetposPaymentClient {
                         context,
                         getTerminalId(),
                         nibssKeyHolder.clearSessionKey,
-                        currentlyLoggedInUser!!.terminalSerialNumber
+                        currentlyLoggedInUser!!.terminalSerialNumber,
                     ).map { nibssConfigData ->
                         setConfigData(nibssConfigData)
                         configData = nibssConfigData
@@ -240,12 +238,12 @@ object NetposPaymentClient {
     private fun repushTransactionsToBackend() {
         val workRequest = PeriodicWorkRequestBuilder<RepushFailedTransactionToBackendWorker>(
             15,
-            TimeUnit.MINUTES
+            TimeUnit.MINUTES,
         ).setConstraints(
             Constraints.Builder()
                 .setRequiredNetworkType(
-                    NetworkType.CONNECTED
-                ).build()
+                    NetworkType.CONNECTED,
+                ).build(),
         ).build()
         workManager.enqueue(workRequest)
     }
@@ -258,7 +256,7 @@ object NetposPaymentClient {
         cardHolder: String,
         remark: String,
         rrn: String = "",
-        stan: String = ""
+        stan: String = "",
     ): Single<TransactionWithRemark?> {
         return if (getUserData().bankAccountNumber.isEmpty() || getUserData().terminalSerialNumber.isEmpty() || getUserData().mid.isEmpty()) {
             makePaymentNibss(context, terminalId, makePaymentParams, cardScheme, cardHolder, remark)
@@ -275,7 +273,7 @@ object NetposPaymentClient {
         cardHolder: String,
         remark: String,
         rrn: String = "",
-        stan: String = ""
+        stan: String = "",
     ): Single<TransactionWithRemark?> {
         transactionResponseDao = AppDatabase.getDatabaseInstance(context).transactionResponseDao()
         val transactionTrackingTableDao =
@@ -293,7 +291,7 @@ object NetposPaymentClient {
                 remark,
                 transactionTrackingTableDao,
                 rrn,
-                if (stan.isNotEmpty()) stan else null
+                if (stan.isNotEmpty()) stan else null,
             )
         } else {
             getRRn()
@@ -308,7 +306,7 @@ object NetposPaymentClient {
                         remark,
                         transactionTrackingTableDao,
                         it.body(),
-                        if (stan.isNotEmpty()) stan else null
+                        if (stan.isNotEmpty()) stan else null,
                     )
                 }
         }
@@ -322,7 +320,7 @@ object NetposPaymentClient {
         cardHolder: String,
         remark: String,
         rrn: String = "",
-        stan: String = ""
+        stan: String = "",
     ): Single<TransactionWithRemark?> {
         transactionResponseDao = AppDatabase.getDatabaseInstance(context).transactionResponseDao()
         val transactionTrackingTableDao =
@@ -353,7 +351,7 @@ object NetposPaymentClient {
                 iswToken,
                 transactionTrackingTableDao,
                 rrn,
-                mId
+                mId,
             )
         } else {
             return getRRn()
@@ -372,7 +370,7 @@ object NetposPaymentClient {
                         iswToken,
                         transactionTrackingTableDao,
                         rrnFromBackend ?: "",
-                        mId
+                        mId,
                     )
                 }
         }
@@ -390,7 +388,7 @@ object NetposPaymentClient {
         iswToken: String,
         transactionTrackingTableDao: TransactionTrackingTableDao,
         rrn: String,
-        mId: String
+        mId: String,
     ): Single<TransactionWithRemark?> =
         if (iswToken.isNotEmpty()) {
             processTransactionViaInterSwitchMakePayment(
@@ -405,7 +403,7 @@ object NetposPaymentClient {
                 interSwitchObject,
                 iswToken,
                 stan,
-                mId
+                mId,
             )
         } else {
             getIswTokenAtRuntime()
@@ -422,7 +420,7 @@ object NetposPaymentClient {
                         interSwitchObject,
                         it,
                         stan,
-                        mId
+                        mId,
                     )
                 }
         }
@@ -439,7 +437,7 @@ object NetposPaymentClient {
         interSwitchObject: String,
         iswToken: String,
         stan: String?,
-        mId: String
+        mId: String,
     ): Single<TransactionWithRemark?> {
         val params = gson.fromJson(makePaymentParams, MakePaymentParams::class.java)
         // IsoAccountType.
@@ -452,12 +450,12 @@ object NetposPaymentClient {
                 0L,
                 accountType = IsoAccountType.valueOf(params.accountType.name),
                 RRN = rrn,
-                STAN = stan
+                STAN = stan,
             )
 
         val destinationAcc = gson.fromJson(
             interSwitchObject,
-            GetPartnerInterSwitchThresholdResponse::class.java
+            GetPartnerInterSwitchThresholdResponse::class.java,
         ).bankAccountNumber
 
         if (destinationAcc.isEmpty()) {
@@ -471,7 +469,7 @@ object NetposPaymentClient {
             "",
             terminalId = getUserData().terminalId,
             terminalSerial = getUserData().terminalSerialNumber,
-            destinationAcc
+            destinationAcc,
         )
 
         requestData.iswParameters = iswParam
@@ -483,7 +481,7 @@ object NetposPaymentClient {
                 requestData.amount,
                 transactionRequestData = requestData,
                 keyHolder = null,
-                configData = null
+                configData = null,
             )
 
         val transactionToLog = params.getTransactionResponseToLog(cardScheme, requestData, rrn)
@@ -497,7 +495,7 @@ object NetposPaymentClient {
             remark,
             transactionTrackingTableDao,
             rrn,
-            requestData
+            requestData,
         ).flatMap {
             Single.just(it)
         }
@@ -512,14 +510,14 @@ object NetposPaymentClient {
         remark: String,
         transactionTrackingTableDao: TransactionTrackingTableDao,
         rrn: String?,
-        requestData: TransactionRequestData
+        requestData: TransactionRequestData,
     ): Single<TransactionWithRemark> {
         return logTransactionToBackEndBeforeMakingPayment(transactionToLog)
             .doOnError {
                 Toast.makeText(
                     context,
                     "An error occured, please try again later",
-                    Toast.LENGTH_LONG
+                    Toast.LENGTH_LONG,
                 ).show()
                 Timber.d("ERROR_FROM_LOGGING_TO_SERVER=====>%s", it.localizedMessage)
                 return@doOnError
@@ -531,15 +529,15 @@ object NetposPaymentClient {
                                 isConnectionError(transRes.responseMessage) ->
                                     iswPaymentProcessorObject!!.rollback(
                                         context,
-                                        MessageReasonCode.Timeout
+                                        MessageReasonCode.Timeout,
                                     )
                                 wasTransactionCompletedPartially(transRes.responseCode) -> iswPaymentProcessorObject!!.rollback(
                                     context,
-                                    MessageReasonCode.CompletedPartially
+                                    MessageReasonCode.CompletedPartially,
                                 )
                                 doesResponseCodeWarrantsReversal(transRes.responseCode) -> iswPaymentProcessorObject!!.rollback(
                                     context,
-                                    MessageReasonCode.UnSpecified
+                                    MessageReasonCode.UnSpecified,
                                 )
                                 else ->
                                     Single.just(transRes)
@@ -566,7 +564,7 @@ object NetposPaymentClient {
                                     transactionToLog,
                                     rrn ?: "",
                                     remark,
-                                    transactionTrackingTableDao
+                                    transactionTrackingTableDao,
                                 )
                             } ?: run {
                                 handleTransactionUpdateAndReturnSingle(
@@ -574,7 +572,7 @@ object NetposPaymentClient {
                                     transactionToLog,
                                     rrn ?: "",
                                     remark,
-                                    transactionTrackingTableDao
+                                    transactionTrackingTableDao,
                                 )
                             }
                         }
@@ -587,14 +585,14 @@ object NetposPaymentClient {
         transactionToLog: TransactionToLogBeforeConnectingToNibbs,
         rrn: String,
         remark: String,
-        transactionTrackingTableDao: TransactionTrackingTableDao
+        transactionTrackingTableDao: TransactionTrackingTableDao,
     ): Single<TransactionWithRemark> {
         if (it.responseCode == "00") {
             updateTransactionInBackendAfterMakingPayment(
                 transactionToLog.transactionResponse.rrn,
                 mapDanbamitaleResponseToResponseWithRrn(it, remark, rrn),
                 "APPROVED",
-                transactionTrackingTableDao
+                transactionTrackingTableDao,
             )
         } else {
             updateTransactionInBackendAfterMakingPayment(
@@ -602,10 +600,10 @@ object NetposPaymentClient {
                 transactionResponse = mapDanbamitaleResponseToResponseWithRrn(
                     it,
                     remark = remark,
-                    rrn
+                    rrn,
                 ),
                 status = it.responseMessage,
-                transactionTrackingTableDao
+                transactionTrackingTableDao,
             )
         }
 
@@ -622,14 +620,14 @@ object NetposPaymentClient {
         remark: String,
         transactionTrackingTableDao: TransactionTrackingTableDao,
         rrn: String?,
-        stan: String?
+        stan: String?,
     ): Single<TransactionWithRemark?> {
         val params = gson.fromJson(makePaymentParams, MakePaymentParams::class.java)
         validateField(params.amount)
         val configData: ConfigData = Singletons.getConfigData() ?: run {
             showToast(
                 "Terminal has not been configured, restart the application to configure",
-                context
+                context,
             )
             return Single.just(null)
         }
@@ -637,7 +635,7 @@ object NetposPaymentClient {
             getKeyHolder() ?: run {
                 showToast(
                     "Terminal has not been configured, restart the application to configure",
-                    context
+                    context,
                 )
                 return Single.just(null)
             }
@@ -646,7 +644,7 @@ object NetposPaymentClient {
             if (terminalId.isNullOrEmpty()) getUserData().terminalId else terminalId,
             connectionData,
             keyHolder,
-            configData
+            configData,
         )
 
         // IsoAccountType.
@@ -655,7 +653,7 @@ object NetposPaymentClient {
             OriginalDataElements(
                 originalTransactionType = TransactionType.PURCHASE,
                 originalRRN = rrn?.takeLast(12) ?: "",
-                originalSTAN = stan?.takeLast(6) ?: ""
+                originalSTAN = stan?.takeLast(6) ?: "",
             )
         val requestData =
             TransactionRequestData(
@@ -665,7 +663,7 @@ object NetposPaymentClient {
                 accountType = IsoAccountType.parseStringAccountType(params.accountType.name),
                 RRN = rrn?.takeLast(12),
                 originalDataElements = originalDataElements,
-                STAN = stan?.takeLast(6)
+                STAN = stan?.takeLast(6),
             )
 
         val transactionToLog = params.getTransactionResponseToLog(cardScheme, requestData, rrn)
@@ -678,7 +676,7 @@ object NetposPaymentClient {
                 Toast.makeText(
                     context,
                     "An error occured, please try again later",
-                    Toast.LENGTH_LONG
+                    Toast.LENGTH_LONG,
                 ).show()
                 Timber.d("ERROR_FROM_FIRST_LOGGING_TO_SERVER=====>%s", it.localizedMessage)
                 return@doOnError
@@ -689,7 +687,7 @@ object NetposPaymentClient {
                     .onErrorResumeNext {
                         processor.rollback(
                             context,
-                            MessageReasonCode.Timeout
+                            MessageReasonCode.Timeout,
                         )
                     }
                     .flatMap labelCheckForReversal@{ transRes ->
@@ -698,11 +696,11 @@ object NetposPaymentClient {
                                 processor.rollback(context, MessageReasonCode.Timeout)
                             wasTransactionCompletedPartially(transRes.responseCode) -> processor.rollback(
                                 context,
-                                MessageReasonCode.CompletedPartially
+                                MessageReasonCode.CompletedPartially,
                             )
                             doesResponseCodeWarrantsReversal(transRes.responseCode) -> processor.rollback(
                                 context,
-                                MessageReasonCode.UnSpecified
+                                MessageReasonCode.UnSpecified,
                             )
                             else ->
                                 Single.just(transRes)
@@ -714,14 +712,14 @@ object NetposPaymentClient {
                             mapDanbamitaleResponseToResponseWithRrn(
                                 transResponse,
                                 remark,
-                                transResponse.RRN
+                                transResponse.RRN,
                             ),
                             if (transResponse.responseCode == "00") "APPROVED" else transResponse.responseMessage,
-                            transactionTrackingTableDao
+                            transactionTrackingTableDao,
                         )
                         Timber.d(
                             "PAYMENT_DONE_SUCCESSFULLY=====>%s",
-                            gson.toJson(transResponse)
+                            gson.toJson(transResponse),
                         )
                         transResp = transResponse
                         if (transResponse.responseCode == "A3") {
@@ -734,11 +732,11 @@ object NetposPaymentClient {
                                     data?.let { configResult ->
                                         Prefs.putString(
                                             PREF_KEYHOLDER,
-                                            gson.toJson(configResult.first)
+                                            gson.toJson(configResult.first),
                                         )
                                         Prefs.putString(
                                             PREF_CONFIG_DATA,
-                                            gson.toJson(configResult.second)
+                                            gson.toJson(configResult.second),
                                         )
                                     }
                                 }.disposeWith(compositeDisposable)
@@ -756,16 +754,16 @@ object NetposPaymentClient {
                                 mapDanbamitaleResponseToResponseWithRrn(
                                     transResponse,
                                     remark,
-                                    rrn
-                                )
+                                    rrn,
+                                ),
                             )
                         } ?: run {
                             Single.just(
                                 mapDanbamitaleResponseToResponseWithRrn(
                                     transResponse,
                                     remark,
-                                    rrn
-                                )
+                                    rrn,
+                                ),
                             )
                         }
                     }
@@ -780,7 +778,7 @@ object NetposPaymentClient {
         rrn: String,
         transactionResponse: TransactionWithRemark,
         status: String,
-        transactionTrackingTableDao: TransactionTrackingTableDao
+        transactionTrackingTableDao: TransactionTrackingTableDao,
     ) {
         val dataToLog = DataToLogAfterConnectingToNibss(status, transactionResponse, rrn)
         stormApiService.updateLogAfterConnectingToNibss2(rrn, dataToLog)
@@ -790,9 +788,9 @@ object NetposPaymentClient {
                     ModelObjects.TransactionResponseXForTracking(
                         dataToLog.rrn,
                         mapToTransactionResponseX(mapToTransactionResponse(dataToLog.transactionResponse)),
-                        dataToLog.status
+                        dataToLog.status,
                     ),
-                    transactionTrackingTableDao
+                    transactionTrackingTableDao,
                 )
                 Timber.d("ERROR_SAVING_TRANS_FOR_TRACKING==>${it.localizedMessage}")
             }
@@ -800,15 +798,15 @@ object NetposPaymentClient {
             .subscribe { data, error ->
                 data?.let {
                     if (it.message()
-                        .contains("There is an error") || it.code() == 404 || it.code() == 500 || it.code() in 400..500
+                            .contains("There is an error") || it.code() == 404 || it.code() == 500 || it.code() in 400..500
                     ) {
                         saveTransactionForTracking(
                             ModelObjects.TransactionResponseXForTracking(
                                 dataToLog.rrn,
                                 mapToTransactionResponseX(mapToTransactionResponse(dataToLog.transactionResponse)),
-                                dataToLog.status
+                                dataToLog.status,
                             ),
-                            transactionTrackingTableDao
+                            transactionTrackingTableDao,
                         )
                     }
                 }
@@ -819,7 +817,7 @@ object NetposPaymentClient {
 
     private fun saveTransactionForTracking(
         transactionResponse: ModelObjects.TransactionResponseXForTracking,
-        transactionTrackingTableDao: TransactionTrackingTableDao
+        transactionTrackingTableDao: TransactionTrackingTableDao,
     ) {
         val disposable = CompositeDisposable()
         transactionTrackingTableDao.insertTransactionForTracking(transactionResponse)
@@ -877,10 +875,10 @@ object NetposPaymentClient {
      * @param accountType
      * @return CheckAccountBalanceResponse
      * */
-    private fun balanceEnquiry(
+    fun balanceEnquiry(
         context: Context,
         cardData: CardData,
-        accountType: String
+        accountType: String,
     ): Single<CheckAccountBalanceResponse> =
         if (getUserData().mid.isNotEmpty() && getUserData().bankAccountNumber.isNotEmpty() && getUserData().terminalSerialNumber.isNotEmpty()) {
             val iswToken = Prefs.getString(getUserData().partnerId + TOKEN_RESPONSE_TAG, "")
@@ -890,7 +888,7 @@ object NetposPaymentClient {
                     accountType,
                     getUserData().mid,
                     iswToken,
-                    getUserData().bankAccountNumber
+                    getUserData().bankAccountNumber,
                 )
             } else {
                 getIswTokenAtRuntime().flatMap {
@@ -899,7 +897,7 @@ object NetposPaymentClient {
                         accountType,
                         getUserData().mid,
                         it,
-                        getUserData().bankAccountNumber
+                        getUserData().bankAccountNumber,
                     )
                 }
             }
@@ -910,13 +908,13 @@ object NetposPaymentClient {
     private fun balanceEnquiryNibss(
         context: Context,
         cardData: CardData,
-        accountType: String
+        accountType: String,
     ): Single<CheckAccountBalanceResponse> {
         val transactionType = TransactionType.BALANCE
         val configData: ConfigData = Singletons.getConfigData() ?: kotlin.run {
             showToast(
                 "Terminal has not been configured, restart the application to configure",
-                context
+                context,
             )
             return Single.just(null)
         }
@@ -924,7 +922,7 @@ object NetposPaymentClient {
             getKeyHolder() ?: kotlin.run {
                 showToast(
                     "Terminal has not been configured, restart the application to configure",
-                    context
+                    context,
                 )
                 return Single.just(null)
             }
@@ -933,14 +931,14 @@ object NetposPaymentClient {
             getUserData().terminalId,
             connectionData,
             keyHolder,
-            configData
+            configData,
         )
 
         val requestData =
             TransactionRequestData(
                 transactionType,
                 amount = 0L,
-                accountType = IsoAccountType.parseStringAccountType(accountType)
+                accountType = IsoAccountType.parseStringAccountType(accountType),
             )
 
         val processor = TransactionProcessor(hostConfig)
@@ -961,13 +959,13 @@ object NetposPaymentClient {
         accountType: String,
         mId: String,
         iswToken: String,
-        destinationAcc: String
+        destinationAcc: String,
     ): Single<CheckAccountBalanceResponse> {
         val requestData =
             TransactionRequestData(
                 TransactionType.BALANCE,
                 amount = 15L,
-                accountType = IsoAccountType.parseStringAccountType(accountType)
+                accountType = IsoAccountType.parseStringAccountType(accountType),
             )
 
         val iswParam = IswParameters(
@@ -977,7 +975,7 @@ object NetposPaymentClient {
             "",
             terminalId = getUserData().terminalId,
             terminalSerial = getUserData().terminalSerialNumber,
-            destinationAcc
+            destinationAcc,
         )
 
         requestData.iswParameters = iswParam
@@ -989,7 +987,7 @@ object NetposPaymentClient {
                 requestData.amount,
                 transactionRequestData = requestData,
                 keyHolder = null,
-                configData = null
+                configData = null,
             )
 
         return iswPaymentProcessorObject!!.processIswTransaction(cardData)

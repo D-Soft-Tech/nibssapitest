@@ -1,25 +1,29 @@
 package com.danbamitale.epmslib.utils
 
-
 import java.io.ByteArrayOutputStream
 import java.text.NumberFormat
 import java.util.*
 
-
 object Utility {
 
-    fun hex(data: ByteArray): String {
+    init {
+        System.loadLibrary("module-params")
+    }
 
+    private external fun getDefaultIp(): String
+    private external fun getDefaultPort(): String
+
+    val POS_VAS_NIBSS_DEFAULT_IP = getDefaultIp()
+    val POS_VAS_NIBSS_DEFAULT_PORT = getDefaultPort().toInt()
+
+    fun hex(data: ByteArray): String {
         val sb = StringBuilder()
         for (b in data) {
             sb.append(Character.forDigit(b.toInt() and 240 shr 4, 16))
             sb.append(Character.forDigit(b.toInt() and 15, 16))
-
         }
         return sb.toString()
     }
-
-
 
     fun toHexString(b: ByteArray): String {
         var result = ""

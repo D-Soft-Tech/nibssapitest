@@ -20,7 +20,8 @@ import com.pixplicity.easyprefs.library.Prefs
 fun useStormTerminalId() = Prefs.getBoolean(PREF_USE_STORM_TERMINAL_ID, true)
 fun TransactionResponse.toNibssResponse(remark: String? = null): NibssResponse =
     Singletons.gson.fromJson(
-        Singletons.gson.toJson(this), NibssResponse::class.java
+        Singletons.gson.toJson(this),
+        NibssResponse::class.java
     ).also {
         it.responseMessage = try {
             this.responseMessage
@@ -57,8 +58,8 @@ object Singletons {
     fun getSavedConfigurationData(): ConfigurationData {
         // LIVE ENDPOINT
         return ConfigurationData(
-            "196.6.103.18",
-            "5016",
+            UtilityParams.nibss_ip,
+            UtilityParams.nibss_port.toString(),
             DEFAULT_TERMINAL_ID,
             Keys.posvasLiveKey1,
             Keys.posvasLiveKey2
@@ -66,11 +67,11 @@ object Singletons {
 
         // TEST ENDPOINT
 //        return ConfigurationData(
-//            "196.6.103.10",
-//            "55533",
-//            "20398A4C",
-//            "5D25072F04832A2329D93E4F91BA23A2",
-//            "86CBCDE3B0A22354853E04521686863D"
+//            UtilityParams.nibssConnectionTestIpAddress,
+//            UtilityParams.nibssConnectionTestPortAddress.toString(),
+//            UtilityParams.nibssTestTid,
+//            UtilityParams.nibssTestKey1,
+//            UtilityParams.nibssTestKey2
 //        )
     }
 

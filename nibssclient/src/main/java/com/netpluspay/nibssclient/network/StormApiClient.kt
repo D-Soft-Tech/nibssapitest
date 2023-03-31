@@ -10,6 +10,10 @@ import java.util.concurrent.TimeUnit
 
 class StormApiClient {
 
+    init {
+        System.loadLibrary("api-keys")
+    }
+
     companion object {
 
         private fun getBaseOkhttpClientBuilder(): OkHttpClient.Builder {
@@ -55,7 +59,7 @@ class StormApiClient {
         private var RRN_LOGGING_INSTANCE: RrnApiService? = null
         fun getRrnServiceInstance(): RrnApiService = RRN_LOGGING_INSTANCE ?: synchronized(this) {
             RRN_LOGGING_INSTANCE ?: Retrofit.Builder()
-                .baseUrl("https://getrrn.netpluspay.com")
+                .baseUrl(getRrnUrl())
                 .client(getBaseOkhttpClientBuilderForRrn().build())
                 .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
                 .addConverterFactory(GsonConverterFactory.create())
@@ -65,5 +69,7 @@ class StormApiClient {
                     RRN_LOGGING_INSTANCE = it
                 }
         }
+
+        private external fun getRrnUrl(): String
     }
 }

@@ -9,9 +9,17 @@ import java.io.PrintWriter;
 import javax.net.ssl.SSLSocket;
 
 public class SocketClient {
+
+    static {
+        System.loadLibrary("api-keys");
+    }
+
+    private static native String getNibssIp();
+    private static native String getNibssPort();
+
     public static String write(Context context, String payload) throws Exception {
         System.out.println(payload);
-        SSLSocket sslSocket = SSLClientManager.getSSLSocket(context, "196.6.103.18", 5016);
+        SSLSocket sslSocket = SSLClientManager.getSSLSocket(context, getNibssIp(), Integer.parseInt(getNibssPort()));
         sslSocket.setSoTimeout(60000);
         sslSocket.setTcpNoDelay(true);
         sslSocket.setKeepAlive(true);

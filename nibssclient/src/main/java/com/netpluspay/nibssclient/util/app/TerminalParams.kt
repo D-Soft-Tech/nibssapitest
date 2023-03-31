@@ -1,11 +1,12 @@
 package com.netpluspay.nibssclient.util.app
 
+import com.netpluspay.nibssclient.util.UtilityParams
 
 object TerminalParams {
-    const val PROD_HOST = "196.6.103.18"
-    const val PROD_PORT = 5016
-    var TEST_HOST = "epms.test.netpluspay.com"
-    var TEST_PORT = 6868
+    val PROD_HOST = UtilityParams.nibss_ip
+    val PROD_PORT = UtilityParams.nibss_port
+    var TEST_HOST = UtilityParams.nibbs_test_url
+    var TEST_PORT = UtilityParams.nibss_test_port
     var ON_TEST_ENV = false
     var CONNECTION_HOST = PROD_HOST
     var CONNECTION_PORT = PROD_PORT

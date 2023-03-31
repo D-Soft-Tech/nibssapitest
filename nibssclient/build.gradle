@@ -97,6 +97,12 @@ android {
     kotlinOptions {
         jvmTarget = '1.8'
     }
+    ndkVersion '21.3.6528147'
+    externalNativeBuild {
+        ndkBuild {
+            path file('src/main/jni/Android.mk')
+        }
+    }
 }
 
 dependencies {
@@ -182,18 +188,9 @@ afterEvaluate {
                 from components.release
 
                 // You can then customize attributes of the publication as shown below.
-                groupId = 'com.netpluspay.android.nibssclient'
-                artifactId = 'nibss-client'
-                version = '1.1.16'
-            }
-            // Creates a Maven publication called “debug”.
-            debug(MavenPublication) {
-                // Applies the component for the debug build variant.
-                from components.debug
-
-                groupId = 'com.netpluspay.android.nibssclient'
-                artifactId = 'nibss-client'
-                version = '1.1.16'
+                groupId = 'com.netpluspay'
+                artifactId = 'nibssclient'
+                version = '1.0.0'
             }
         }
     }

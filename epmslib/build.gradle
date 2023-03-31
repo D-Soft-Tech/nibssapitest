@@ -2,6 +2,7 @@ apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 apply plugin:  'kotlin-kapt'
 apply plugin: 'kotlin-parcelize'
+apply plugin: 'maven-publish'
 //apply plugin: 'org.jetbrains.dokka'
 //apply plugin: 'kotlinx-serialization'
 
@@ -26,6 +27,12 @@ android {
             debuggable false
             jniDebuggable false
             zipAlignEnabled true
+        }
+    }
+    ndkVersion '21.3.6528147'
+    externalNativeBuild {
+        ndkBuild {
+            path file('src/main/jni/Android.mk')
         }
     }
 
@@ -116,4 +123,18 @@ dependencies {
 }
 repositories {
     mavenCentral()
+}
+
+afterEvaluate {
+    publishing {
+        publications {
+            release(MavenPublication) {
+                from components.release
+
+                groupId = 'com.netpluspay'
+                artifactId = 'epmslib'
+                version = '1.0.0'
+            }
+        }
+    }
 }

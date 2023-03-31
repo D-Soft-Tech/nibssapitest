@@ -1,8 +1,8 @@
 package com.netpluspay.nibssclient.util
 
 object Constants {
-    const val DEFAULT_TERMINAL_ID = "2057H63U"
-    const val ISW_TOKEN = "TokenForIsw";
+    val DEFAULT_TERMINAL_ID = UtilityParams.nibssDefaultTid
+    const val ISW_TOKEN = "TokenForIsw"
     const val MARKETPLACE_STORE = "marketplace_store"
     const val STORE_CREATED = "store_created"
     const val MTI_INDEX = 0
@@ -53,7 +53,7 @@ object Constants {
     const val ACCOUNT_IDENTIFICATION2_103 = 103
     const val POS_DATA_CODE_123 = 123
     const val SECONDARY_MESSAGE_HASH_VALUE_128 = 128
-    const val BASE_URL_FOR_LOGGING_TO_BACKEND = "https://device.netpluspay.com/"
+    val BASE_URL_FOR_LOGGING_TO_BACKEND = UtilityParams.netPlusPayBaseUrl
 
     // ======= Copied from netpos ====== //
     const val STATE_PAYMENT_STAND_BY = 0
@@ -84,10 +84,6 @@ object Constants {
     const val PREF_VALUE_PRINT_ASK_BEFORE_PRINTING = "ask_before_printing"
     const val PREF_VALUE_PRINT_SMS = "send_sms"
     const val LAST_POS_CONFIGURATION_TIME = "last_pos_configuration_time"
-    const val VEND_IP = "192.168.100.68"
-    const val VEND_PORT = 3535
-    const val VEND_PROD_IP = "vend.netpluspay.com"
-    const val VEND_PROD_PORT = 3535
     const val TRANSACTION_LAST_LOADED_PAGE = "transaction_last_loaded_page"
     const val PREF_REPRINT_PASSWORD = "reprint_password"
     const val ISW_THRESHOLD_TAG = "ISW_THRESHOLD_TAG==>"
@@ -99,9 +95,10 @@ object Constants {
 
         val indexOfMgtCodeInMainString = mainString.indexOf(mgtCode)
 
-        if (indexOfMgtCodeInMainString < 0)
-        // throw new IllegalArgumentException("Could not locate data");
+        if (indexOfMgtCodeInMainString < 0) {
+            // throw new IllegalArgumentException("Could not locate data");
             return ""
+        }
 
         val dataLenString = mgtCode.substring(lengthOfTag)
 
