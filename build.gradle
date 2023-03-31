@@ -6,10 +6,8 @@ buildscript {
         google()
         jcenter()
         gradlePluginPortal()
-        maven {
-            url "https://jitpack.io"
-            credentials { username "jp_h2namglqo2okk0oc6um0t9f61k" }
-        }
+        mavenLocal()
+        maven { url 'https://jitpack.io' }
     }
 
     dependencies {
@@ -28,10 +26,8 @@ allprojects {
         mavenLocal()
         google()
         jcenter()
-        maven {
-            url "https://jitpack.io"
-            credentials { username "jp_h2namglqo2okk0oc6um0t9f61k" }
-        }
+        mavenLocal()
+        maven { url 'https://jitpack.io' }
     }
 }
 
