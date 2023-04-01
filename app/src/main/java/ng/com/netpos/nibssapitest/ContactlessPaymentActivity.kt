@@ -129,7 +129,7 @@ class ContactlessPaymentActivity : AppCompatActivity() {
                     amount = amountToPay,
                     terminalId = userData.terminalId,
                     cardData = cdData,
-                    accountType = IsoAccountType.SAVINGS
+                    accountType = IsoAccountType.SAVINGS,
                 )
             }
         cardData.pinBlock = cardResult.cardReadResult.pinBlock
@@ -140,7 +140,7 @@ class ContactlessPaymentActivity : AppCompatActivity() {
                 gson.toJson(makePaymentParams),
                 cardResult.cardScheme,
                 CARD_HOLDER_NAME,
-                "TESTING_TESTING"
+                "TESTING_TESTING",
             ).subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(
@@ -149,7 +149,7 @@ class ContactlessPaymentActivity : AppCompatActivity() {
                         resultViewerTextView.text = gson.toJson(transactionWithRemark)
                         Timber.d(
                             "$PAYMENT_SUCCESS_DATA_TAG%s",
-                            gson.toJson(transactionWithRemark)
+                            gson.toJson(transactionWithRemark),
                         )
                     },
                     { throwable ->
@@ -157,17 +157,17 @@ class ContactlessPaymentActivity : AppCompatActivity() {
                         resultViewerTextView.text = throwable.localizedMessage
                         Timber.d(
                             "$PAYMENT_ERROR_DATA_TAG%s",
-                            throwable.localizedMessage
+                            throwable.localizedMessage,
                         )
-                    }
-                )
+                    },
+                ),
         )
     }
 
     private fun launchContactless(
         launcher: ActivityResultLauncher<Intent>,
         amountToPay: Double,
-        cashBackAmount: Double = 0.0
+        cashBackAmount: Double = 0.0,
     ) {
         val savedKeyHolder = getSavedKeyHolder()
 
@@ -177,13 +177,13 @@ class ContactlessPaymentActivity : AppCompatActivity() {
                 launcher,
                 this.clearPinKey, // "86CBCDE3B0A22354853E04521686863D" // pinKey
                 amountToPay, // amount
-                cashBackAmount // cashbackAmount(optional)
+                cashBackAmount, // cashbackAmount(optional)
             )
         } ?: run {
             Toast.makeText(
                 this,
                 getString(R.string.terminal_not_configured),
-                Toast.LENGTH_LONG
+                Toast.LENGTH_LONG,
             ).show()
             configureTerminal()
         }
@@ -210,7 +210,7 @@ class ContactlessPaymentActivity : AppCompatActivity() {
                         Toast.makeText(
                             this,
                             getString(R.string.terminal_configured),
-                            Toast.LENGTH_LONG
+                            Toast.LENGTH_LONG,
                         ).show()
                         loaderDialog.dismiss()
                         val keyHolder = response.first
@@ -225,12 +225,12 @@ class ContactlessPaymentActivity : AppCompatActivity() {
                         Toast.makeText(
                             this,
                             getString(R.string.terminal_config_failed),
-                            Toast.LENGTH_LONG
+                            Toast.LENGTH_LONG,
                         ).show()
                         loaderDialog.dismiss()
                         Timber.d("%s%s", ERROR_TAG, it.localizedMessage)
                     }
-                }
+                },
         )
     }
 

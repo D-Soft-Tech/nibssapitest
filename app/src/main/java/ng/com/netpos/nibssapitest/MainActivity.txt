@@ -1,15 +1,15 @@
-package ng.com.netpos.nibssapitest
+package ng.com.netpos.nibssapitest.presentation.dialog.activities
 
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.databinding.DataBindingUtil
 import com.danbamitale.epmslib.entities.CardData
-import com.danbamitale.epmslib.entities.KeyHolder
 import com.danbamitale.epmslib.entities.clearPinKey
-import com.danbamitale.epmslib.entities.clearSessionKey
 import com.google.gson.Gson
 import com.netpluspay.netpossdk.NetPosSdk
 import com.netpluspay.netpossdk.emv.CardReadResult
@@ -20,80 +20,44 @@ import com.netpluspay.nibssclient.models.IsoAccountType
 import com.netpluspay.nibssclient.models.MakePaymentParams
 import com.netpluspay.nibssclient.models.UserData
 import com.netpluspay.nibssclient.service.NetposPaymentClient
-import com.netpluspay.nibssclient.util.Constants.DEFAULT_TERMINAL_ID
-import com.netpluspay.nibssclient.work.ModelObjects.disposeWith
 import com.pixplicity.easyprefs.library.Prefs
 import com.pos.sdk.emvcore.POIEmvCoreManager
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.schedulers.Schedulers
+import ng.com.netpos.nibssapitest.AppConstant
+import ng.com.netpos.nibssapitest.AppConstant.PAYMENT_SUCCESS_DATA_TAG
+import ng.com.netpos.nibssapitest.AppConstant.getSampleUserData
+import ng.com.netpos.nibssapitest.R
+import ng.com.netpos.nibssapitest.databinding.ActivityMainBinding
+import ng.com.netpos.nibssapitest.presentation.dialog.LoadingDialog
 import timber.log.Timber
 
 class MainActivity : AppCompatActivity() {
+    private lateinit var binding: ActivityMainBinding
     private val compositeDisposable: CompositeDisposable = CompositeDisposable()
     var netposPaymentClient: NetposPaymentClient = NetposPaymentClient
     private lateinit var editAmount: EditText
-    private lateinit var reversalRrn: EditText
-    private lateinit var reversalBtn: Button
-    private lateinit var callHomeButton: Button
-    private lateinit var userData: UserData
+    private lateinit var balanceEnquiry: Button
+    private lateinit var resultViewerTextView: TextView
+    private val userData: UserData = getSampleUserData()
+    private val gson: Gson = Gson()
     private var cardData: CardData? = null
     private var previousAmount: Long? = null
     private lateinit var cardResult: CardReadResult
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-        editAmount = findViewById(R.id.editTextNumber)
-        reversalBtn = findViewById(R.id.reversal_button)
-        callHomeButton = findViewById(R.id.call_home_btn)
-        userData = UserData(
-            businessName = "Netplus",
-            partnerName = "Netplus",
-            partnerId = "9E89FFBD-9968-4F69-96DB-4E1250F14D55",
-            terminalId = "2033ALWE",
-            terminalSerialNumber = "1142016190002868" /*NetPosSdk.getDeviceSerial()*/,
-            businessAddress = "Marwa Lagos",
-            customerName = "Test Account",
-            mid = "2033LAGPOOO7885",
-            bankAccountNumber = "0169422762",
-            institutionalCode = "627787"
-        )
+        binding = DataBindingUtil.setContentView(this, R.layout.activity_main)
+        editAmount = binding.editTextNumber
+        balanceEnquiry = binding.checkAccountBalance
+        resultViewerTextView = binding.resultTextView
 
-        callHomeButton.setOnClickListener {
-            val savedKeyHolder = Prefs.getString("pref_keyholder", "")
-            val keyHolder = Gson().fromJson<KeyHolder>(savedKeyHolder, KeyHolder::class.java)
-            NetposPaymentClient.callHomeToRefreshSessionKeys(
-                this,
-                "2033ALZP",
-                keyHolder.clearSessionKey,
-                NetPosSdk.getDeviceSerial()
-            ).subscribeOn(Schedulers.io())
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe { t1, t2 ->
-                    t1?.let {
-                        Timber.d("CALL_HOME_RESPONSE=====>%s", it)
-                        Toast.makeText(this, it, Toast.LENGTH_LONG).show()
-                    }
-                    t2?.let {
-                        Timber.d("CALL_HOME_ERROR====>%s", it.localizedMessage)
-                    }
-                }.disposeWith(compositeDisposable)
-        }
-
-        reversalRrn = findViewById(R.id.reversl_editText)
-
-        reversalBtn.setOnClickListener {
-            val makePaymentParams = MakePaymentParams(
-                amount = previousAmount!!,
-                terminalId = userData.terminalId,
-                cardData = cardData!!,
-                accountType = IsoAccountType.SAVINGS
-            )
+        balanceEnquiry.setOnClickListener {
         }
 
         netposPaymentClient.logUser(this, Gson().toJson(userData))
         compositeDisposable.add(
-            netposPaymentClient.init(this, false, Gson().toJson(userData))
+            netposPaymentClient.init(this, Gson().toJson(userData))
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe { data, error ->
@@ -115,12 +79,24 @@ class MainActivity : AppCompatActivity() {
                     error?.let {
                         Timber.d("GOTTEN_ERROR%s", it.localizedMessage)
                     }
-                }
+                },
         )
     }
 
     fun makePayment(v: View) {
-        readCard()
+        if (editAmount.text.isNullOrEmpty() || editAmount.text.toString().toLong() < 15) {
+            Toast.makeText(
+                this,
+                getString(R.string.amount_can_not_be_less_than_15),
+                Toast.LENGTH_LONG,
+            ).show()
+            return
+        }
+        readCard("makePayment")
+    }
+
+    fun balanceEnquiry(v: View) {
+        readCard("balanceEnquiry")
     }
 
     override fun onDestroy() {
@@ -137,13 +113,20 @@ class MainActivity : AppCompatActivity() {
         Timber.d("SAVED_CONFIG_DATA_ON_RESUME%s", savedConfigData)
     }
 
-    private fun readCard() {
+    private fun readCard(action: String) {
         val preferredModes: MutableList<Int> = ArrayList()
         preferredModes.add(POIEmvCoreManager.DEV_ICC)
         preferredModes.add(POIEmvCoreManager.DEV_PICC)
         val cardReader = CardReaderService(this, preferredModes, 45)
+        val amount = if (editAmount.text == null || editAmount.text.toString()
+                .toLong() < 15
+        ) {
+            15L
+        } else {
+            editAmount.text.toString().toLong()
+        }
         compositeDisposable.add(
-            cardReader.initiateICCCardPayment(200, 0)
+            cardReader.initiateICCCardPayment(amount, 0)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe {
@@ -161,66 +144,117 @@ class MainActivity : AppCompatActivity() {
                         Timber.d("CARD_DATA%s", Gson().toJson(it.data))
                         cardResult = it.data
                         Timber.e(cardResult.toString())
-
-                        val card = cardResult.track2Data?.let {
-                            cardResult.applicationPANSequenceNumber?.let { it1 ->
-                                CardData(
-                                    it,
-                                    cardResult.nibssIccSubset,
-                                    it1,
-                                    "051"
-                                )
-                            }
+                        val cardData = it.data.let { data ->
+                            CardData(
+                                data.track2Data!!,
+                                data.nibssIccSubset,
+                                data.applicationPANSequenceNumber!!,
+                            )
                         }
-
-                        val makePaymentParams =
-                            card?.let { cdData ->
-                                cardData = cdData
-                                previousAmount = editAmount.text.toString().toInt().times(100L)
-                                MakePaymentParams(
-                                    amount = editAmount.text.toString().toInt().times(100L),
-                                    terminalId = userData.terminalId,
-                                    cardData = cdData,
-                                    accountType = IsoAccountType.SAVINGS
-                                )
-                            }
-                        cardResult.cardScheme?.let { it1 ->
-                            cardResult.cardHolderName?.let { it2 ->
-                                netposPaymentClient.makePayment2(
-                                    this,
-                                    null,
-                                    Gson().toJson(makePaymentParams),
-                                    it1,
-                                    it2,
-                                    "TestingAgain",
-                                    "",
-                                    ""
-                                ).subscribeOn(Schedulers.io())
-                                    .doOnError { error ->
-                                        Timber.d("ERROR_THAT_HAPPENED===>%s", Gson().toJson(error))
-                                    }
-                                    .observeOn(AndroidSchedulers.mainThread())
-                                    .subscribe(
-                                        { transactionWithRemark ->
-                                            Toast.makeText(
-                                                this,
-                                                transactionWithRemark.toString(),
-                                                Toast.LENGTH_LONG
-                                            ).show()
-                                            Timber.d("DATA==>${Gson().toJson(transactionWithRemark)}")
-                                        },
-                                        { throwable ->
-                                            Timber.d("ERROR==>${throwable.localizedMessage}")
-                                        }
-                                    )
-                            }?.let { it3 ->
-                                compositeDisposable.add(
-                                    it3
-                                )
-                            }
+                        if (action == "makePayment") {
+                            callMakePayment(
+                                cardData,
+                                it.data.encryptedPinBlock!!,
+                                it.data.cardScheme!!,
+                                editAmount.text.toString().toLong().times(100),
+                            )
+                        } else {
+//                            checkBalance(it.data)
                         }
                     }
-                }
+                },
         )
     }
+
+    private fun callMakePayment(
+        cardData: CardData,
+        pinBlock: String,
+        cardScheme: String,
+        amountToPay: Long,
+    ) {
+        val loaderDialog: LoadingDialog = LoadingDialog()
+        loaderDialog.loadingMessage = getString(R.string.processing_payment)
+        loaderDialog.show(supportFragmentManager, AppConstant.TAG_MAKE_PAYMENT)
+
+        val makePaymentParams =
+            cardData.let { cdData ->
+                previousAmount = amountToPay
+                MakePaymentParams(
+                    amount = amountToPay,
+                    terminalId = userData.terminalId,
+                    cardData = cdData,
+                    accountType = IsoAccountType.SAVINGS,
+                )
+            }
+        cardData.pinBlock = pinBlock
+        compositeDisposable.add(
+            netposPaymentClient.makePayment(
+                this,
+                userData.terminalId,
+                gson.toJson(makePaymentParams),
+                cardScheme,
+                AppConstant.CARD_HOLDER_NAME,
+                "TESTING_TESTING",
+            ).subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(
+                    { transactionWithRemark ->
+                        loaderDialog.dismiss()
+                        resultViewerTextView.text = gson.toJson(transactionWithRemark)
+                        Timber.d(
+                            "$PAYMENT_SUCCESS_DATA_TAG%s",
+                            gson.toJson(transactionWithRemark),
+                        )
+                    },
+                    { throwable ->
+                        loaderDialog.dismiss()
+                        resultViewerTextView.text = throwable.localizedMessage
+                        Timber.d(
+                            "${AppConstant.PAYMENT_ERROR_DATA_TAG}%s",
+                            throwable.localizedMessage,
+                        )
+                    },
+                ),
+        )
+    }
+
+//    private fun checkBalance(cardReadResult: CardReadResult): Disposable {
+//        val loaderDialog: LoadingDialog = LoadingDialog()
+//        loaderDialog.loadingMessage = getString(R.string.checking_balance)
+//        loaderDialog.show(supportFragmentManager, TAG_CHECK_BALANCE)
+//        val cardData = cardReadResult.let {
+//            CardData(
+//                it.track2Data!!,
+//                it.nibssIccSubset,
+//                it.applicationPANSequenceNumber!!,
+//                AppConstant.POS_ENTRY_MODE
+//            ).also { cardD ->
+//                cardD.pinBlock = it.encryptedPinBlock
+//            }
+//        }
+//        return netposPaymentClient.balanceEnquiry(this, cardData, IsoAccountType.SAVINGS.name)
+//            .subscribeOn(Schedulers.io())
+//            .observeOn(AndroidSchedulers.mainThread())
+//            .subscribe { data, error ->
+//                data?.let {
+//                    loaderDialog.dismiss()
+//                    val responseString = if (it.responseCode == Status.APPROVED.statusCode) {
+//                        "Response: APPROVED\nResponse Code: ${it.responseCode}\n\nAccount Balance:\n" + it.accountBalances.joinToString(
+//                            "\n"
+//                        ) { accountBalance ->
+//                            "${accountBalance.accountType}: ${
+//                            accountBalance.amount.div(100).formatCurrencyAmount()
+//                            }"
+//                        }
+//                    } else {
+//                        "Response: ${it.responseMessage}\nResponse Code: ${it.responseCode}"
+//                    }
+//                    resultViewerTextView.text = responseString
+//                }
+//                error?.let {
+//                    loaderDialog.dismiss()
+//                    resultViewerTextView.text = it.localizedMessage
+//                }
+//            }
+//    }
 }
