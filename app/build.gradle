@@ -7,16 +7,13 @@ plugins {
 
 allprojects {
     repositories {
-//        maven {
-//            url("$rootDir/com.netpluspay.netpossdk:netpossdk:1.0.24")
-//        }
 
         google()
         jcenter()
         mavenLocal()
         maven {
             url "https://jitpack.io"
-            credentials { username "jp_h2namglqo2okk0oc6um0t9f61k" }
+            credentials { username "jp_iu426m6k793tts6nisfjg8at42" }
         }
     }
 }
@@ -106,9 +103,6 @@ dependencies {
     implementation 'net.sf.j8583:j8583:1.17.0'
     implementation 'com.google.code.gson:gson:2.8.6'
     implementation("commons-lang:commons-lang:2.6")
-//    implementation project(':nibssclient')
-//    implementation project(':netpossdk-release')
-//    implementation "com.netpluspay.netpossdk:netpossdk:1.0.24"
     implementation project(':epmslib')
 
     implementation('com.squareup.retrofit2:converter-simplexml:2.5.0') {
@@ -124,7 +118,7 @@ dependencies {
     implementation 'com.squareup.retrofit2:converter-gson:2.9.0'
     implementation 'com.squareup.retrofit2:adapter-rxjava2:2.9.0'
     implementation("com.squareup.okhttp3:logging-interceptor:4.9.0")
-    implementation("org.bitbucket.netplustechteam:contactless_sdk:1.0.8")
+    implementation("com.github.netplusTeam:contactless-sdk:1.0.19")
 
     //room
     implementation "androidx.room:room-runtime:2.4.2"
