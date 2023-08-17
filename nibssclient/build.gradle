@@ -5,17 +5,16 @@ plugins {
     id 'maven-publish'
     id 'kotlin-parcelize'
     id 'org.jetbrains.kotlin.android'
-    id 'maven'
 }
 
 group = 'com.netpluspay.netpospaymentclient'
 version = '1.0.1'
 
 android {
-    compileSdkVersion 31
+    compileSdkVersion 33
 
     defaultConfig {
-        minSdkVersion 21
+        minSdkVersion 24
         targetSdkVersion 31
         versionCode 1
         versionName "1.0"
