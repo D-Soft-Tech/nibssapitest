@@ -41,7 +41,7 @@ android {
 
 dependencies {
     def room_version = '2.3.0-alpha02'
-    def lifecycle_version = "2.4.1"
+    def lifecycle_version = "2.4.0"
     def paging_version = "3.1.1"
     implementation "androidx.paging:paging-runtime:$paging_version"
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycle_version"
@@ -52,8 +52,8 @@ dependencies {
 
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
-    implementation 'androidx.appcompat:appcompat:1.0.0-alpha3'
-    implementation 'com.android.support.constraint:constraint-layout:1.1.1'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.android.support.constraint:constraint-layout:2.0.4'
 
     //J8583 Dependency
     implementation 'net.sf.j8583:j8583:1.17.0'
@@ -106,6 +106,7 @@ dependencies {
     implementation 'id.zelory:compressor:2.1.0'
 
     implementation 'com.pixplicity.easyprefs:library:1.9.0'
+    implementation "com.github.D-Soft-Tech:DPrefs:1.0.4"
 
 }
 

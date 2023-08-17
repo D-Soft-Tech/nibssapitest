@@ -53,7 +53,7 @@ Java_com_netpluspay_nibssclient_util_UtilityParams_getNibssIp(JNIEnv *env, jobje
 
 JNIEXPORT jstring JNICALL
 Java_com_netpluspay_nibssclient_util_UtilityParams_getNibssPort(JNIEnv *env, jobject thiz) {
-    return (*env)->NewStringUTF(env, "5016");
+    return (*env)->NewStringUTF(env, "4016");
 }
 
 JNIEXPORT jstring JNICALL

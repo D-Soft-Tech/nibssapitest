@@ -1,9 +1,9 @@
 package ng.com.netpos.nibssapitest
 
 import com.danbamitale.epmslib.entities.KeyHolder
+import com.dsofttech.dprefs.utils.DPrefs
 import com.google.gson.Gson
 import com.netpluspay.nibssclient.models.UserData
-import com.pixplicity.easyprefs.library.Prefs
 
 object AppConstant {
     const val KEY_HOLDER = "KEY_HOLDER"
@@ -21,17 +21,17 @@ object AppConstant {
         businessName = "Netplus",
         partnerName = "Netplus",
         partnerId = "9E89FFBD-9968-4F69-96DB-4E1250F14D55",
-        terminalId = "2033ALWE",
+        terminalId = "2035BDZ9",
         terminalSerialNumber = "1142016190002868", // getDeviceSerialNumber(),
         businessAddress = "Marwa Lagos",
         customerName = "Test Account",
         mid = "2033LAGPOOO7885",
         bankAccountNumber = "0169422762",
-        institutionalCode = "627787"
+        institutionalCode = "627787",
     )
 
     fun getSavedKeyHolder(): KeyHolder? {
-        val savedKeyHolderInStringFormat = Prefs.getString(KEY_HOLDER, "")
+        val savedKeyHolderInStringFormat = DPrefs.getString(KEY_HOLDER, "")
         return Gson().fromJson(savedKeyHolderInStringFormat, KeyHolder::class.java)
     }
 }

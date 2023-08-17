@@ -17,7 +17,7 @@ const val KSN_LIVE = "0000000002DDDDE00001"
 object DukptHelper {
     fun getSessionKey(
         IPEK: String = IPEK_LIVE,
-        KSN: String = KSN_LIVE
+        KSN: String = KSN_LIVE,
     ): String {
         var initialIPEK: String = IPEK
         // println("The expected value of the initial IPEK $initialIPEK");
@@ -62,7 +62,7 @@ object DukptHelper {
         val checkWorkingKey = XORorANDorORfunction(
             sessionkey,
             "00000000000000FF00000000000000FF",
-            "^"
+            "^",
         )
         println("*************************The expected value of the working key is $checkWorkingKey")
         return XORorANDorORfunction(sessionkey, "00000000000000FF00000000000000FF", "^")
@@ -77,17 +77,17 @@ object DukptHelper {
             if (symbol === "|") {
                 result += (
                     Integer.parseInt(a[i].toString(), 16).or
-                    (Integer.parseInt(b[i].toString(), 16)).toString(16).toUpperCase()
+                        (Integer.parseInt(b[i].toString(), 16)).toString(16).toUpperCase()
                     )
             } else if (symbol === "^") {
                 result += (
                     Integer.parseInt(a[i].toString(), 16).xor
-                    (Integer.parseInt(b[i].toString(), 16)).toString(16).toUpperCase()
+                        (Integer.parseInt(b[i].toString(), 16)).toString(16).toUpperCase()
                     )
             } else {
                 result += (
                     Integer.parseInt(a[i].toString(), 16).and
-                    (Integer.parseInt(b[i].toString(), 16))
+                        (Integer.parseInt(b[i].toString(), 16))
                     ).toString(16).toUpperCase()
             }
         }
@@ -111,7 +111,7 @@ object DukptHelper {
             XORorANDorORfunction(
                 current_sk,
                 "FFFFFFFFFFFFFFFF0000000000000000",
-                "&"
+                "&",
             ).substring(16)
         val rightIpek =
             XORorANDorORfunction(current_sk, "0000000000000000FFFFFFFFFFFFFFFF", "&").substring(16)
@@ -124,12 +124,12 @@ object DukptHelper {
         val leftIpek2 = XORorANDorORfunction(
             resultCurrent_sk,
             "FFFFFFFFFFFFFFFF0000000000000000",
-            "&"
+            "&",
         ).substring(0, 16)
         val rightIpek2 = XORorANDorORfunction(
             resultCurrent_sk,
             "0000000000000000FFFFFFFFFFFFFFFF",
-            "&"
+            "&",
         ).substring(16)
         val message2 = XORorANDorORfunction(rightIpek2, ksn_mod, "^")
         val desresult2 = desEncrypt(message2, leftIpek2)
@@ -194,9 +194,9 @@ object DukptHelper {
             workingKey,
             byteArrayToHexString(bout.toByteArray()).substring(
                 0,
-                16
+                16,
             ),
-            "^"
+            "^",
         )
     }
 }

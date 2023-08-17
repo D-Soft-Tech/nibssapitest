@@ -4,6 +4,7 @@ import com.danbamitale.epmslib.entities.ConfigData
 import com.danbamitale.epmslib.entities.KeyHolder
 import com.danbamitale.epmslib.entities.TransactionResponse
 import com.danbamitale.epmslib.entities.responseMessage
+import com.dsofttech.dprefs.utils.DPrefs
 import com.google.gson.Gson
 import com.netpluspay.nibssclient.models.ConfigurationData
 import com.netpluspay.nibssclient.models.NibssResponse
@@ -21,7 +22,7 @@ fun useStormTerminalId() = Prefs.getBoolean(PREF_USE_STORM_TERMINAL_ID, true)
 fun TransactionResponse.toNibssResponse(remark: String? = null): NibssResponse =
     Singletons.gson.fromJson(
         Singletons.gson.toJson(this),
-        NibssResponse::class.java
+        NibssResponse::class.java,
     ).also {
         it.responseMessage = try {
             this.responseMessage
@@ -42,18 +43,18 @@ object Singletons {
     fun getGsonInstance() = Gson()
 
     fun setPartnerThreshold(partnerThresh: Int) {
-        Prefs.putInt(PREF_PARTNER_THRESHOLD, partnerThresh)
+        DPrefs.putInt(PREF_PARTNER_THRESHOLD, partnerThresh)
     }
 
     fun getPartnerThreshold() =
-        Prefs.getInt(PREF_PARTNER_THRESHOLD, -10)
+        DPrefs.getInt(PREF_PARTNER_THRESHOLD, -10)
 
     fun setUseStormTid(useStormTid: Boolean) =
-        Prefs.putBoolean(PREF_USE_STORM_TERMINAL_ID, useStormTid)
+        DPrefs.putBoolean(PREF_USE_STORM_TERMINAL_ID, useStormTid)
 
     val gson = Gson()
     fun getCurrentlyLoggedInUser(): User? =
-        gson.fromJson(Prefs.getString(PREF_USER, ""), User::class.java)
+        gson.fromJson(DPrefs.getString(PREF_USER, ""), User::class.java)
 
     fun getSavedConfigurationData(): ConfigurationData {
         // LIVE ENDPOINT
@@ -62,7 +63,7 @@ object Singletons {
             UtilityParams.nibss_port.toString(),
             DEFAULT_TERMINAL_ID,
             Keys.posvasLiveKey1,
-            Keys.posvasLiveKey2
+            Keys.posvasLiveKey2,
         )
 
         // TEST ENDPOINT
@@ -76,17 +77,17 @@ object Singletons {
     }
 
     fun getKeyHolder(): KeyHolder? =
-        gson.fromJson(Prefs.getString(PREF_KEYHOLDER, null), KeyHolder::class.java)
+        gson.fromJson(DPrefs.getString(PREF_KEYHOLDER, ""), KeyHolder::class.java)
 
     fun settKeyHolder(keyHolder: KeyHolder) {
-        Prefs.putString(PREF_KEYHOLDER, gson.toJson(keyHolder, KeyHolder::class.java))
+        DPrefs.putString(PREF_KEYHOLDER, gson.toJson(keyHolder, KeyHolder::class.java))
     }
 
     fun getConfigData(): ConfigData? =
-        gson.fromJson(Prefs.getString(PREF_CONFIG_DATA, null), ConfigData::class.java)
+        gson.fromJson(DPrefs.getString(PREF_CONFIG_DATA, ""), ConfigData::class.java)
 
     fun setConfigData(configData: ConfigData) {
-        Prefs.putString(PREF_CONFIG_DATA, gson.toJson(configData, ConfigData::class.java))
+        DPrefs.putString(PREF_CONFIG_DATA, gson.toJson(configData, ConfigData::class.java))
     }
 }
 

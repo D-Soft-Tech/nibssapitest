@@ -7,7 +7,7 @@ import androidx.work.Constraints
 import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
-import com.danbamitale.epmslib.entities.*
+import com.danbamitale.epmslib.entities.* // ktlint-disable no-wildcard-imports
 import com.danbamitale.epmslib.entities.CardData
 import com.danbamitale.epmslib.entities.KeyHolder
 import com.danbamitale.epmslib.entities.OriginalDataElements
@@ -17,6 +17,7 @@ import com.danbamitale.epmslib.processors.TerminalConfigurator
 import com.danbamitale.epmslib.processors.TransactionProcessor
 import com.danbamitale.epmslib.utils.IsoAccountType
 import com.danbamitale.epmslib.utils.MessageReasonCode
+import com.dsofttech.dprefs.utils.DPrefs
 import com.google.gson.Gson
 import com.isw.gateway.TransactionProcessorWrapper
 import com.isw.iswclient.iswapiclient.getTokenClient
@@ -25,7 +26,7 @@ import com.isw.iswclient.request.TokenPassportRequest
 import com.netpluspay.nibssclient.dao.TransactionResponseDao
 import com.netpluspay.nibssclient.dao.TransactionTrackingTableDao
 import com.netpluspay.nibssclient.database.AppDatabase
-import com.netpluspay.nibssclient.models.*
+import com.netpluspay.nibssclient.models.* // ktlint-disable no-wildcard-imports
 import com.netpluspay.nibssclient.network.RrnApiService
 import com.netpluspay.nibssclient.network.StormApiClient
 import com.netpluspay.nibssclient.network.StormApiService
@@ -52,7 +53,6 @@ import com.netpluspay.nibssclient.work.ModelObjects
 import com.netpluspay.nibssclient.work.ModelObjects.disposeWith
 import com.netpluspay.nibssclient.work.ModelObjects.mapToTransactionResponseX
 import com.netpluspay.nibssclient.work.RepushFailedTransactionToBackendWorker
-import com.pixplicity.easyprefs.library.Prefs
 import io.reactivex.Single
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
@@ -157,7 +157,7 @@ object NetposPaymentClient {
         keyHolder = getKeyHolder()
         configData = Singletons.getConfigData()
         val req = when {
-            DateUtils.isToday(Prefs.getLong(LAST_POS_CONFIGURATION_TIME, 0)).not() -> {
+            DateUtils.isToday(DPrefs.getLong(LAST_POS_CONFIGURATION_TIME, 0)).not() -> {
                 configureTerminal(context)
             }
             keyHolder != null && configData != null -> {
@@ -215,8 +215,8 @@ object NetposPaymentClient {
                 var resp: Single<Pair<KeyHolder?, ConfigData?>> = Single.just(Pair(null, null))
                 if (nibssKeyHolder.isValid) {
                     keyHolder = nibssKeyHolder
-                    Prefs.putLong(LAST_POS_CONFIGURATION_TIME, System.currentTimeMillis())
-                    Prefs.putString(PREF_KEYHOLDER, gson.toJson(nibssKeyHolder))
+                    DPrefs.putLong(LAST_POS_CONFIGURATION_TIME, System.currentTimeMillis())
+                    DPrefs.putString(PREF_KEYHOLDER, gson.toJson(nibssKeyHolder))
                     return@flatMap terminalConfigurator.downloadTerminalParameters(
                         context,
                         getTerminalId(),
@@ -225,7 +225,7 @@ object NetposPaymentClient {
                     ).map { nibssConfigData ->
                         setConfigData(nibssConfigData)
                         configData = nibssConfigData
-                        Prefs.putString(PREF_CONFIG_DATA, gson.toJson(nibssConfigData))
+                        DPrefs.putString(PREF_CONFIG_DATA, gson.toJson(nibssConfigData))
                         Timber.e("Config data set")
                         return@map Pair(nibssKeyHolder, nibssConfigData)
                     }
@@ -336,7 +336,7 @@ object NetposPaymentClient {
             GetPartnerInterSwitchThresholdResponse(0, bankAccNumber, institutionalCode)
         val interSwitchObjectInString = gson.toJson(interSwitchObject)
 
-        val iswToken = Prefs.getString(getUserData().partnerId + ISW_TOKEN, "")
+        val iswToken = DPrefs.getString(getUserData().partnerId + ISW_TOKEN, "")
 
         return if (rrn.isNotEmpty()) {
             abstractedCheckForIswThresholdToProcessIswPayment(
@@ -546,8 +546,8 @@ object NetposPaymentClient {
                         .flatMap {
                             transResp = it
                             if (it.responseCode == "A3") {
-                                Prefs.remove(PREF_CONFIG_DATA)
-                                Prefs.remove(PREF_KEYHOLDER)
+                                DPrefs.removePref(PREF_CONFIG_DATA)
+                                DPrefs.removePref(PREF_KEYHOLDER)
                                 configureTerminal(context)
                             }
 
@@ -723,18 +723,18 @@ object NetposPaymentClient {
                         )
                         transResp = transResponse
                         if (transResponse.responseCode == "A3") {
-                            Prefs.remove(PREF_CONFIG_DATA)
-                            Prefs.remove(PREF_KEYHOLDER)
+                            DPrefs.removePref(PREF_CONFIG_DATA)
+                            DPrefs.removePref(PREF_KEYHOLDER)
                             configureTerminal(context)
                                 .subscribeOn(Schedulers.io())
                                 .observeOn(AndroidSchedulers.mainThread())
                                 .subscribe { data, _ ->
                                     data?.let { configResult ->
-                                        Prefs.putString(
+                                        DPrefs.putString(
                                             PREF_KEYHOLDER,
                                             gson.toJson(configResult.first),
                                         )
-                                        Prefs.putString(
+                                        DPrefs.putString(
                                             PREF_CONFIG_DATA,
                                             gson.toJson(configResult.second),
                                         )
@@ -844,7 +844,7 @@ object NetposPaymentClient {
             .subscribe { t1, t2 ->
                 t1?.let {
                     Timber.d("$TOKEN_RESPONSE_TAG${it.token}")
-                    Prefs.putString(getUserData().partnerId + TOKEN_RESPONSE_TAG, it.token)
+                    DPrefs.putString(getUserData().partnerId + TOKEN_RESPONSE_TAG, it.token)
                 }
                 t2?.let {
                 }
@@ -860,7 +860,7 @@ object NetposPaymentClient {
             }
             .flatMap {
                 Timber.d("$TOKEN_RESPONSE_TAG${it.token}")
-                Prefs.putString(getUserData().partnerId + TOKEN_RESPONSE_TAG, it.token)
+                DPrefs.putString(getUserData().partnerId + TOKEN_RESPONSE_TAG, it.token)
                 Single.just(it.token)
             }
     }
@@ -881,7 +881,7 @@ object NetposPaymentClient {
         accountType: String,
     ): Single<CheckAccountBalanceResponse> =
         if (getUserData().mid.isNotEmpty() && getUserData().bankAccountNumber.isNotEmpty() && getUserData().terminalSerialNumber.isNotEmpty()) {
-            val iswToken = Prefs.getString(getUserData().partnerId + TOKEN_RESPONSE_TAG, "")
+            val iswToken = DPrefs.getString(getUserData().partnerId + TOKEN_RESPONSE_TAG, "")
             if (iswToken.isNotEmpty()) {
                 balanceEnquiryIsw(
                     cardData,

@@ -12,6 +12,7 @@ import androidx.appcompat.app.AppCompatActivity
 import com.danbamitale.epmslib.entities.CardData
 import com.danbamitale.epmslib.entities.clearPinKey
 import com.danbamitale.epmslib.extensions.formatCurrencyAmount
+import com.dsofttech.dprefs.utils.DPrefs
 import com.google.gson.Gson
 import com.netpluspay.contactless.sdk.start.ContactlessSdk
 import com.netpluspay.contactless.sdk.utils.ContactlessReaderResult
@@ -19,7 +20,6 @@ import com.netpluspay.nibssclient.models.IsoAccountType
 import com.netpluspay.nibssclient.models.MakePaymentParams
 import com.netpluspay.nibssclient.models.UserData
 import com.netpluspay.nibssclient.service.NetposPaymentClient
-import com.pixplicity.easyprefs.library.Prefs
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.schedulers.Schedulers
@@ -220,8 +220,8 @@ class ContactlessPaymentActivity : AppCompatActivity() {
                         val configData = response.second
                         val pinKey = keyHolder?.clearPinKey
                         if (pinKey != null) {
-                            Prefs.putString(KEY_HOLDER, gson.toJson(keyHolder))
-                            Prefs.putString(CONFIG_DATA, gson.toJson(configData))
+                            DPrefs.putString(KEY_HOLDER, gson.toJson(keyHolder))
+                            DPrefs.putString(CONFIG_DATA, gson.toJson(configData))
                         }
                     }
                     error?.let {
