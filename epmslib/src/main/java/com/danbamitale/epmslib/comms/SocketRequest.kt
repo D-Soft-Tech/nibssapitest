@@ -32,7 +32,7 @@ class SocketRequest
                 context,
                 connectionData.ipAddress,
                 connectionData.ipPort,
-                connectionData.certFileResId ?: 0
+                connectionData.certFileResId ?: 0,
             )
             sslsocket.soTimeout = 60 * 1000
             return send(isoStream, sslsocket)

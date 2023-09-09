@@ -9,6 +9,8 @@ import android.widget.Toast
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import com.danbamitale.epmslib.di.AppModule.providesDataEc
+import com.danbamitale.epmslib.domain.DataEc
 import com.danbamitale.epmslib.entities.CardData
 import com.danbamitale.epmslib.entities.clearPinKey
 import com.danbamitale.epmslib.extensions.formatCurrencyAmount
@@ -42,6 +44,7 @@ import timber.log.Timber
 
 class ContactlessPaymentActivity : AppCompatActivity() {
     private val gson: Gson = Gson()
+    private val dataEncryption: DataEc = providesDataEc()
     private val compositeDisposable: CompositeDisposable = CompositeDisposable()
     private var previousAmount: Long? = null
     private var userData: UserData = getSampleUserData()
@@ -97,6 +100,13 @@ class ContactlessPaymentActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_contactless_payment)
+
+        nibssApiTest.forEach { key, value ->
+            val result = dataEncryption.encryptData(value)
+
+            Timber.tag("$key  =========>     ").d("$result \n\n")
+        }
+
         initializeViews()
         configureTerminal()
         netposPaymentClient.logUser(this, gson.toJson(userData))
@@ -273,4 +283,32 @@ class ContactlessPaymentActivity : AppCompatActivity() {
                 },
         )
     }
+
+    val nibssApiTest = mapOf(
+        "RrnUrl" to "https://getrrn.netpluspay.com",
+        "TestKeyOne" to "5D25072F04832A2329D93E4F91BA23A2",
+        "TestKeyTwo" to "86CBCDE3B0A22354853E04521686863D",
+        "EpmsLiveKeyOne" to "E6891F73948F16C4D6E979D68534D0F4",
+        "EpmsLiveKeyTwo" to "3D10EF707F98E3543E32B570E9E9AE86",
+        "PosvasLiveKeyOne" to "9BF76D3E13ADD67A51549B7C3EB0E3AD",
+        "PosvasLiveKeyTwo" to "A4BAEC5E31BFD913919262C7A7A76D52",
+        "NibssIp" to "196.6.103.18",
+        "NibssPort" to "5016",
+        "NibssIp2" to "196.6.103.18",
+        "NibssPort2" to "4016",
+        "NibssTestUrl" to "epms.test.netpluspay.com",
+        "NibssTestPort" to "6868",
+        "NetPlusPayUrl" to "https://device.netpluspay.com/",
+        "DefaultTid" to "2057H63U",
+        "NibssTestIp" to "196.6.103.10",
+        "NibssConnectionTestPort" to "55533",
+        "NibssConnectionTestKeyOne" to "5D25072F04832A2329D93E4F91BA23A2",
+        "NibssConnectionTestKeyTwo" to "86CBCDE3B0A22354853E04521686863D",
+        "NibssConnectionTestTid" to "20398A4C",
+        "SessionKey" to "3F2216D8297BCE9C",
+        "IpekTest" to "9F8011E7E71E483B",
+        "KsnTest" to "0000000006DDDDE01500",
+        "KsnLive" to "0000000002DDDDE00001",
+        "NibssTest" to "196.6.103.73",
+    )
 }

@@ -130,8 +130,7 @@ object NetposPaymentClient {
     /**
      * Configures the terminal and sets up other neccessary data
      * @param context: Context
-     * @param configureSilently: Boolean
-     * @param serializedUserData: String
+     * @param serializedUserData Serialized object of type [UserData]
      * @return Single<Pair<KeyHolder?, ConfigData?>> Single of pair of Keyholder and configData objects
      * */
     fun init(

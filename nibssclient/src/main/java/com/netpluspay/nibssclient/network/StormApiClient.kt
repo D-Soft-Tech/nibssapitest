@@ -1,5 +1,6 @@
 package com.netpluspay.nibssclient.network
 
+import com.danbamitale.epmslib.di.AppModule.providesDataEc
 import com.netpluspay.nibssclient.util.Constants.BASE_URL_FOR_LOGGING_TO_BACKEND
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -10,11 +11,9 @@ import java.util.concurrent.TimeUnit
 
 class StormApiClient {
 
-    init {
-        System.loadLibrary("api-keys")
-    }
-
     companion object {
+
+        private val ec = providesDataEc()
 
         private fun getBaseOkhttpClientBuilder(): OkHttpClient.Builder {
             val okHttpClientBuilder = OkHttpClient.Builder()
@@ -59,7 +58,7 @@ class StormApiClient {
         private var RRN_LOGGING_INSTANCE: RrnApiService? = null
         fun getRrnServiceInstance(): RrnApiService = RRN_LOGGING_INSTANCE ?: synchronized(this) {
             RRN_LOGGING_INSTANCE ?: Retrofit.Builder()
-                .baseUrl(getRrnUrl())
+                .baseUrl(ec.decryptData(getRrnUrl()))
                 .client(getBaseOkhttpClientBuilderForRrn().build())
                 .addCallAdapterFactory(RxJava2CallAdapterFactory.create())
                 .addConverterFactory(GsonConverterFactory.create())

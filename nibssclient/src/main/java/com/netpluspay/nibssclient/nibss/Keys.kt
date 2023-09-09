@@ -1,10 +1,14 @@
 package com.netpluspay.nibssclient.nibss
 
+import com.danbamitale.epmslib.di.AppModule.providesDataEc
+
 object Keys {
 
     init {
-        System.loadLibrary("api-keys")
+        System.loadLibrary("module-credentials")
     }
+
+    private val ec = providesDataEc()
 
     private external fun getTestKeyOne(): String
     private external fun getTestKeyTwo(): String
@@ -13,14 +17,14 @@ object Keys {
     private external fun getPosvasLiveKeyOne(): String
     private external fun getPosvasLiveKeyTwo(): String
 
-    val testKey1 = getTestKeyOne()
-    val testKey2 = getTestKeyTwo()
+    val testKey1 = ec.decryptData(getTestKeyOne())
+    val testKey2 = ec.decryptData(getTestKeyTwo())
 
     // epms
-    val epmsLiveKey1 = getEpmsLiveKeyOne()
-    val epmsLiveKey2 = getEpmsLiveKeyTwo()
+    val epmsLiveKey1 = ec.decryptData(getEpmsLiveKeyOne())
+    val epmsLiveKey2 = ec.decryptData(getEpmsLiveKeyTwo())
 
     // posvas
-    val posvasLiveKey1 = getPosvasLiveKeyOne()
-    val posvasLiveKey2 = getPosvasLiveKeyTwo()
+    val posvasLiveKey1 = ec.decryptData(getPosvasLiveKeyOne())
+    val posvasLiveKey2 = ec.decryptData(getPosvasLiveKeyTwo())
 }

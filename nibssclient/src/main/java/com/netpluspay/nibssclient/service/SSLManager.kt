@@ -30,7 +30,7 @@ object SSLManager {
     fun getSSLSocket(context: Context): SSLSocket =
         getSSLFactory(context).createSocket(
             TerminalParams.CONNECTION_HOST,
-            TerminalParams.CONNECTION_PORT
+            TerminalParams.CONNECTION_PORT,
         ) as SSLSocket
 
     private fun getSSLFactory(context: Context): SSLSocketFactory {
@@ -38,24 +38,29 @@ object SSLManager {
         sslContext.init(
             getKeyMangerFactory(context)!!.keyManagers,
             trustEveryOne(),
-            null
+            null,
         )
         return sslContext.socketFactory
     }
 
     private fun getKeyMangerFactory(context: Context): KeyManagerFactory? {
-        if (TerminalParams.isClientCertInitialized().not())
+        if (TerminalParams.isClientCertInitialized().not()) {
             throw "{\"code\":500,\"error\":\"SSL credentials not configured\"}".createNibssException(
-                "initialize"
+                "initialize",
             )
+        }
 
         val password = "netpos_password"
         // load client certificate
         val cert =
             getX509Certificate(
-                if (TerminalParams.FILE_CONTENT) CLIENT_CERT_ASSET.byteInputStream() else context.assets.open(
-                    CLIENT_CERT_ASSET
-                )
+                if (TerminalParams.FILE_CONTENT) {
+                    CLIENT_CERT_ASSET.byteInputStream()
+                } else {
+                    context.assets.open(
+                        CLIENT_CERT_ASSET,
+                    )
+                },
             )
 
         val key = getFromString(context)
@@ -67,7 +72,7 @@ object SSLManager {
             "private-key",
             key,
             password.toCharArray(),
-            arrayOf<Certificate>(cert)
+            arrayOf<Certificate>(cert),
         )
         val kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
         kmf.init(ks, password.toCharArray())
@@ -76,11 +81,14 @@ object SSLManager {
 
     @Throws(Exception::class)
     private fun getFromString(context: Context): PrivateKey? {
-        if (TerminalParams.isClientKeyInitialized().not())
+        if (TerminalParams.isClientKeyInitialized().not()) {
             throw "{\"code\":500,\"error\":\"SSL credentials not configured\"}".createNibssException(
-                "initialize"
+                "initialize",
             )
-        var reader = if (TerminalParams.FILE_CONTENT) CLIENT_KEY_ASSET else {
+        }
+        var reader = if (TerminalParams.FILE_CONTENT) {
+            CLIENT_KEY_ASSET
+        } else {
             val inputStream = context.assets.open(CLIENT_KEY_ASSET)
             val out = String(inputStream.readBytes(), StandardCharsets.UTF_8)
             inputStream.close()
@@ -120,7 +128,7 @@ object SSLManager {
                 override fun getAcceptedIssuers(): Array<X509Certificate> {
                     return arrayOf()
                 }
-            }
+            },
         )
     }
 }
