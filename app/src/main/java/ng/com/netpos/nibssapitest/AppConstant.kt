@@ -25,9 +25,9 @@ object AppConstant {
         terminalSerialNumber = "1142016190002868", // getDeviceSerialNumber(),
         businessAddress = "Marwa Lagos",
         customerName = "Test Account",
-        mid = "2033LAGPOOO7885",
-        bankAccountNumber = "0169422762",
-        institutionalCode = "627787",
+        mid = "", // "2033LAGPOOO7885",
+        bankAccountNumber = "", // "0169422762",
+        institutionalCode = "", // "627787",
     )
 
     fun getSavedKeyHolder(): KeyHolder? {
