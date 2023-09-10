@@ -22,6 +22,11 @@ Java_com_netpluspay_nibssclient_nibss_Keys_getEpmsLiveKeyOne(JNIEnv *env, jobjec
 }
 
 JNIEXPORT jstring JNICALL
+Java_com_netpluspay_nibssclient_util_UtilityParams_getSek(JNIEnv *env, jobject thiz) {
+    return (*env)->NewStringUTF(env, "=[ei}%#@%^+v[&=_");
+}
+
+JNIEXPORT jstring JNICALL
 Java_com_netpluspay_nibssclient_nibss_Keys_getEpmsLiveKeyTwo(JNIEnv *env, jobject thiz) {
     return (*env)->NewStringUTF(env, "ae1fe60ede31078e2033e0390d7df5681c823194058bc50e188f14e25ff1ab5f4dd015fce5f44fca1eb4f2bc581deb2b");
 }
@@ -95,10 +100,14 @@ Java_com_netpluspay_nibssclient_util_UtilityParams_getNibssConnectionTestTid(JNI
     return (*env)->NewStringUTF(env, "cb39ab62567c33124743f9a348b76c92");
 }
 
-
 JNIEXPORT jstring JNICALL
 Java_com_netpluspay_nibssclient_util_UtilityParams_getSessionKey(JNIEnv *env, jobject thiz) {
     return (*env)->NewStringUTF(env, "54bc6b1e7b2a57871db851e94d4f7ea96924623877f93b9983752e6193f227d5");
+}
+
+JNIEXPORT jstring JNICALL
+Java_com_netpluspay_nibssclient_util_UtilityParams_getSeiv(JNIEnv *env, jobject thiz) {
+    return (*env)->NewStringUTF(env, "+p&*,#@!ki_7_+$#");
 }
 
 JNIEXPORT jstring JNICALL
@@ -114,14 +123,4 @@ Java_com_netpluspay_nibssclient_util_UtilityParams_getKsnTest(JNIEnv *env, jobje
 JNIEXPORT jstring JNICALL
 Java_com_netpluspay_nibssclient_util_UtilityParams_getKsnLive(JNIEnv *env, jobject thiz) {
     return (*env)->NewStringUTF(env, "ccf6f772ee2cd3adadfb8a86f3e03a56c14af03ffa60accefe3bcf4b3581d131");
-}
-
-JNIEXPORT jstring JNICALL
-Java_com_netpluspay_nibssclient_util_UtilityParams_getSek(JNIEnv *env, jobject thiz) {
-    return (*env)->NewStringUTF(env, "=[ei}%#@%^+v[&=_");
-}
-
-JNIEXPORT jstring JNICALL
-Java_com_netpluspay_nibssclient_util_UtilityParams_getSeiv(JNIEnv *env, jobject thiz) {
-    return (*env)->NewStringUTF(env, "+p&*,#@!ki_7_+$#");
 }
