@@ -3,10 +3,11 @@ package com.isw.gateway
 import DukptHelper
 import android.content.Context
 import android.util.Log
-import com.danbamitale.epmslib.entities.* // ktlint-disable no-wildcard-imports
+import com.danbamitale.epmslib.di.AppModule.providesDataEc
+import com.danbamitale.epmslib.entities.*
 import com.danbamitale.epmslib.processors.TransactionProcessor
 import com.danbamitale.epmslib.tlv.TLVList
-import com.danbamitale.epmslib.utils.* // ktlint-disable no-wildcard-imports
+import com.danbamitale.epmslib.utils.*
 import com.danbamitale.epmslib.utils.Utility.POS_VAS_NIBSS_DEFAULT_IP
 import com.danbamitale.epmslib.utils.Utility.POS_VAS_NIBSS_DEFAULT_PORT
 import com.google.gson.Gson
@@ -19,7 +20,7 @@ import io.reactivex.Single
 import io.reactivex.schedulers.Schedulers
 import retrofit2.HttpException
 import java.text.SimpleDateFormat
-import java.util.* // ktlint-disable no-wildcard-imports
+import java.util.*
 
 class TransactionProcessorWrapper @JvmOverloads constructor(
     private val merchId: String,
@@ -33,8 +34,11 @@ class TransactionProcessorWrapper @JvmOverloads constructor(
     init {
         System.loadLibrary("api-keys")
     }
-    private val posVasIp: String = getIp()
-    private val posVasPort = getPort().toInt()
+
+    private val ec = providesDataEc()
+
+    private val posVasIp: String = ec.decryptData(getIp())
+    private val posVasPort = ec.decryptData(getPort()).toInt()
     private lateinit var transactionRoute: TransactionRoute
     private lateinit var transactionProcessor: TransactionProcessor
     private var attempt = 0

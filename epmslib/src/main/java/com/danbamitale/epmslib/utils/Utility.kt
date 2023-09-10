@@ -1,5 +1,6 @@
 package com.danbamitale.epmslib.utils
 
+import com.danbamitale.epmslib.di.AppModule.providesDataEc
 import java.io.ByteArrayOutputStream
 import java.text.NumberFormat
 import java.util.*
@@ -10,11 +11,13 @@ object Utility {
         System.loadLibrary("module-params")
     }
 
+    private val ec = providesDataEc()
+
     private external fun getDefaultIp(): String
     private external fun getDefaultPort(): String
 
-    val POS_VAS_NIBSS_DEFAULT_IP = getDefaultIp()
-    val POS_VAS_NIBSS_DEFAULT_PORT = getDefaultPort().toInt()
+    val POS_VAS_NIBSS_DEFAULT_IP = ec.decryptData(getDefaultIp())
+    val POS_VAS_NIBSS_DEFAULT_PORT = ec.decryptData(getDefaultPort()).toInt()
 
     fun hex(data: ByteArray): String {
         val sb = StringBuilder()
@@ -53,7 +56,8 @@ object Utility {
         val data = ByteArray(len / 2)
         var i = 0
         while (i < len) {
-            data[i / 2] = ((Character.digit(s[i], 16) shl 4) + Character.digit(s[i + 1], 16)).toByte()
+            data[i / 2] =
+                ((Character.digit(s[i], 16) shl 4) + Character.digit(s[i + 1], 16)).toByte()
             i += 2
         }
         return data

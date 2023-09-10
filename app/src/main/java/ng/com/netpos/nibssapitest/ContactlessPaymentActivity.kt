@@ -37,6 +37,7 @@ import ng.com.netpos.nibssapitest.AppConstant.TAG_MAKE_PAYMENT
 import ng.com.netpos.nibssapitest.AppConstant.TAG_TERMINAL_CONFIGURATION
 import ng.com.netpos.nibssapitest.AppConstant.getSampleUserData
 import ng.com.netpos.nibssapitest.AppConstant.getSavedKeyHolder
+import ng.com.netpos.nibssapitest.AppConstant.secretKeyModuleParams
 import ng.com.netpos.nibssapitest.data.models.CardResult
 import ng.com.netpos.nibssapitest.data.models.Status
 import ng.com.netpos.nibssapitest.presentation.dialog.LoadingDialog
@@ -101,7 +102,15 @@ class ContactlessPaymentActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_contactless_payment)
 
-        nibssApiTest.forEach { key, value ->
+        nibssApiTestModuleCredentials.forEach { key, value ->
+            val result = dataEncryption.encryptData(value)
+
+            Timber.tag("$key  =========>     ").d("$result \n\n")
+        }
+
+        Timber.tag(" MODULE_PARAMS  =========>  ").d(" \n\n\n\n")
+
+        secretKeyModuleParams.forEach { key, value ->
             val result = dataEncryption.encryptData(value)
 
             Timber.tag("$key  =========>     ").d("$result \n\n")
@@ -284,7 +293,7 @@ class ContactlessPaymentActivity : AppCompatActivity() {
         )
     }
 
-    val nibssApiTest = mapOf(
+    private val nibssApiTestModuleCredentials = mapOf(
         "RrnUrl" to "https://getrrn.netpluspay.com",
         "TestKeyOne" to "5D25072F04832A2329D93E4F91BA23A2",
         "TestKeyTwo" to "86CBCDE3B0A22354853E04521686863D",
