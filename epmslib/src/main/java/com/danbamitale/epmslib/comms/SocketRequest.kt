@@ -1,13 +1,13 @@
 package com.danbamitale.epmslib.comms
 
 import android.content.Context
-import android.util.Log
 import com.danbamitale.epmslib.entities.ConnectionData
+import timber.log.Timber
 import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.io.EOFException
 import java.io.IOException
-import java.net.* // ktlint-disable no-wildcard-imports
+import java.net.*
 import javax.net.ssl.SSLSocket
 
 class SocketRequest
@@ -28,18 +28,18 @@ class SocketRequest
     @Throws(Exception::class)
     fun send(context: Context, isoStream: ByteArray): String {
         if (connectionData.isSSL) {
-            val sslsocket = getConnection(
+            val sslSocket = getConnection(
                 context,
                 connectionData.ipAddress,
                 connectionData.ipPort,
                 connectionData.certFileResId ?: 0,
             )
-            sslsocket.soTimeout = 60 * 1000
-            return send(isoStream, sslsocket)
+            sslSocket.soTimeout = 60 * 1000
+            return send(isoStream, sslSocket)
         } else {
             val socket = Socket()
-            val sockAddr = InetSocketAddress(connectionData.ipAddress, connectionData.ipPort)
-            socket.connect(sockAddr, 60 * 1000)
+            val sockAddress = InetSocketAddress(connectionData.ipAddress, connectionData.ipPort)
+            socket.connect(sockAddress, 60 * 1000)
             socket.soTimeout = 60 * 1000
 
             return send(isoStream, socket)
@@ -61,14 +61,14 @@ class SocketRequest
             val dataOut = DataOutputStream(socket.getOutputStream())
             val dataIn = DataInputStream(socket.getInputStream())
 
-            Log.d("OutData", String(isoStream) + " Length: " + isoStream.size)
+            Timber.tag("OutData").d("${String(isoStream)} Length: ${isoStream.size}")
 
             dataOut.write(isoStream)
 
             dataIn.buffered().use {
                 responseArray = it.readBytes()
             }
-        } catch (eof: EOFException) {
+        } catch (_: EOFException) {
         } catch (e: SocketTimeoutException) {
             throw SocketTimeoutException("Connection timed out, failed to receive response from remote server")
         } catch (e: ConnectException) {
@@ -110,9 +110,9 @@ class SocketRequest
      */
     @Throws(IOException::class)
     fun getConnection(context: Context, ip: String, port: Int, certFileResId: Int): SSLSocket {
-//        val trustFactory = SSLManager.getTrustManagerFactory(context,certFileResId)
-        val sslFactory =
-            SSLManager.getTrustySSLSocketFactory() // getSSLSocketFactory(trustManagerFactory = trustFactory)
+        val trustFactory = SSLManager.getTrustManagerFactory(context, certFileResId)
+        val sslFactory = SSLManager.getTrustySSLSocketFactory(context, certFileResId)
+//        val sslFactory = getSSLSocketFactory(trustManagerFactory = trustFactory)
         return SSLManager.createSocket(sslFactory, ip, port) as SSLSocket
     }
 }

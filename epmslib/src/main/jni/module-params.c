@@ -116,3 +116,13 @@ Java_com_danbamitale_epmslib_utils_UtilityParams_getKsnLive(JNIEnv *env, jobject
     return (*env)->NewStringUTF(env,
                                 "ccf6f772ee2cd3adadfb8a86f3e03a56c14af03ffa60accefe3bcf4b3581d131");
 }
+
+JNIEXPORT jstring JNICALL
+Java_com_danbamitale_epmslib_di_AppModule_getSeK2(JNIEnv *env, jobject thiz) {
+    return (*env)->NewStringUTF(env, "hq+fAexgn7hK2edm");
+}
+
+JNIEXPORT jstring JNICALL
+Java_com_danbamitale_epmslib_di_AppModule_getSeiv2(JNIEnv *env, jobject thiz) {
+    return (*env)->NewStringUTF(env, "0FJk4uPzoWBjXI+z");
+}

@@ -194,7 +194,7 @@ object NetposPaymentClient {
      * @param terminalId
      * @param keyHolderClearSessionKey
      * @param terminalSerialNumber
-     * @return String, which when successful is "00" else, call the configure terminal to get a new session key
+     * @return [Single] of [String], which when successful is "00" else, call the configure terminal to get a new session key
      * */
     fun callHomeToRefreshSessionKeys(
         context: Context,

@@ -10,6 +10,7 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import com.danbamitale.epmslib.di.AppModule.providesDataEc
+import com.danbamitale.epmslib.di.AppModule.providesDataEc2
 import com.danbamitale.epmslib.domain.DataEc
 import com.danbamitale.epmslib.entities.CardData
 import com.danbamitale.epmslib.entities.clearPinKey
@@ -45,6 +46,7 @@ import timber.log.Timber
 class ContactlessPaymentActivity : AppCompatActivity() {
     private val gson: Gson = Gson()
     private val dataEncryption: DataEc = providesDataEc()
+    private val dataEncryption2: DataEc = providesDataEc2()
     private val compositeDisposable: CompositeDisposable = CompositeDisposable()
     private var previousAmount: Long? = null
     private var userData: UserData = getSampleUserData()
@@ -99,6 +101,12 @@ class ContactlessPaymentActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        dataEncryption2.decryptData("bb68554e890476d6728bc8e447b8939bc720a85cc6f0beef13e66f5510ac23f427abaec47a32e450ccf725a3bcb2470bf7b405bc62aa9b3e339a8ab9adac3dfb")
+            .let {
+                Timber.tag("DECRYTPION_DEC").d(it)
+            }
+
         setContentView(R.layout.activity_contactless_payment)
         initializeViews()
         configureTerminal()
