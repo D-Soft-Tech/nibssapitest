@@ -7,7 +7,7 @@ import java.io.InputStream
 import java.net.Socket
 import java.security.KeyStore
 import java.security.SecureRandom
-import java.security.cert.*
+import java.security.cert.* // ktlint-disable no-wildcard-imports
 import javax.net.ssl.* // ktlint-disable no-wildcard-imports
 
 object SSLManager {
@@ -41,6 +41,24 @@ object SSLManager {
         return tmf
     }
 
+    fun getTrustySSLSocketFactory(): SSLSocketFactory {
+        val trustManager = object : X509TrustManager {
+            override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {
+            }
+
+            override fun checkServerTrusted(chain: Array<out X509Certificate>?, authType: String?) {
+            }
+
+            override fun getAcceptedIssuers(): Array<X509Certificate> {
+                return arrayOf()
+            }
+        }
+
+        return SSLContext.getInstance("TLS").apply {
+            init(null, arrayOf(trustManager), SecureRandom())
+        }.socketFactory
+    }
+
     fun getTrustySSLSocketFactory(context: Context, @RawRes certId: Int): SSLSocketFactory {
         val trustManager = object : X509TrustManager {
             override fun checkClientTrusted(chain: Array<out X509Certificate>?, authType: String?) {
@@ -69,7 +87,7 @@ object SSLManager {
                 }.toTypedArray()
         }
 
-        return SSLContext.getInstance("TLS").apply {
+        return SSLContext.getInstance("TLSv1").apply {
             init(null, arrayOf(trustManager), SecureRandom())
         }.socketFactory
     }

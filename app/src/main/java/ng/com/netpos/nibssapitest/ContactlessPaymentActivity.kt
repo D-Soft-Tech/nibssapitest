@@ -101,12 +101,6 @@ class ContactlessPaymentActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        dataEncryption2.decryptData("bb68554e890476d6728bc8e447b8939bc720a85cc6f0beef13e66f5510ac23f427abaec47a32e450ccf725a3bcb2470bf7b405bc62aa9b3e339a8ab9adac3dfb")
-            .let {
-                Timber.tag("DECRYTPION_DEC").d(it)
-            }
-
         setContentView(R.layout.activity_contactless_payment)
         initializeViews()
         configureTerminal()

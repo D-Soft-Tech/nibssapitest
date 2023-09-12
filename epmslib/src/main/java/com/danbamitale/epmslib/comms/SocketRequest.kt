@@ -1,6 +1,7 @@
 package com.danbamitale.epmslib.comms
 
 import android.content.Context
+import com.danbamitale.epmslib.comms.SSLManager.getSSLSocketFactory
 import com.danbamitale.epmslib.entities.ConnectionData
 import timber.log.Timber
 import java.io.DataInputStream
@@ -69,6 +70,7 @@ class SocketRequest
                 responseArray = it.readBytes()
             }
         } catch (_: EOFException) {
+            throw SocketTimeoutException("Connection timed out, failed to receive response from remote server")
         } catch (e: SocketTimeoutException) {
             throw SocketTimeoutException("Connection timed out, failed to receive response from remote server")
         } catch (e: ConnectException) {
@@ -110,8 +112,9 @@ class SocketRequest
      */
     @Throws(IOException::class)
     fun getConnection(context: Context, ip: String, port: Int, certFileResId: Int): SSLSocket {
-        val trustFactory = SSLManager.getTrustManagerFactory(context, certFileResId)
-        val sslFactory = SSLManager.getTrustySSLSocketFactory(context, certFileResId)
+//        val trustFactory = SSLManager.getTrustManagerFactory(context, certFileResId)
+        val sslFactory = SSLManager.getTrustySSLSocketFactory()
+//        val sslFactory = SSLManager.getTrustySSLSocketFactory(context, certFileResId)
 //        val sslFactory = getSSLSocketFactory(trustManagerFactory = trustFactory)
         return SSLManager.createSocket(sslFactory, ip, port) as SSLSocket
     }
