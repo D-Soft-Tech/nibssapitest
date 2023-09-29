@@ -11,6 +11,8 @@ import java.util.concurrent.TimeUnit
 
 class StormApiClient {
 
+    val testingField: String = ""
+
     companion object {
 
         private val ec = providesDataEc()

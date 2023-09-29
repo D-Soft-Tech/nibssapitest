@@ -57,15 +57,12 @@ public class TripleDES {
 	 */
     public static byte[] encrypt(byte[] data, byte[] key)
     {
-//		Log.d(TripleDES.class.getSimpleName(), "Data: " +  Hex2String(data));
-//		Log.d(TripleDES.class.getSimpleName(), "Key: " +  Hex2String(key));
 
     	SecretKey sk = new SecretKeySpec(GetKey(key), "DESede");
     	try {
     		Cipher cipher = Cipher.getInstance("DESede/ECB/NoPadding");
     		cipher.init(Cipher.ENCRYPT_MODE, sk);
-			byte[] enc = cipher.doFinal(data);
-			return enc;
+			return cipher.doFinal(data);
         } catch (NoSuchPaddingException e) {
         } catch (java.security.NoSuchAlgorithmException e) {
         } catch (java.security.InvalidKeyException e) {

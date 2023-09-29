@@ -3,7 +3,6 @@ package com.netpluspay.nibssclient.models
 import com.danbamitale.epmslib.entities.PosMode
 import com.danbamitale.epmslib.entities.TransactionResponse
 import com.danbamitale.epmslib.entities.TransactionType
-import com.danbamitale.epmslib.entities.responseMessage
 import com.danbamitale.epmslib.utils.IsoAccountType
 import com.google.gson.JsonObject
 import java.util.*
@@ -11,17 +10,17 @@ import java.util.*
 data class DataToLogAfterConnectingToNibss(
     val status: String,
     val transactionResponse: TransactionWithRemark,
-    val rrn: String
+    val rrn: String,
 )
 
 data class LogToBackendResponse(
     val `data`: List<Int>,
     val message: String,
-    val status: String
+    val status: String,
 )
 
 data class ResponseBodyAfterLoginToBackend(
-    val message: String
+    val message: String,
 )
 
 data class TransactionWithRemark(
@@ -54,7 +53,7 @@ data class TransactionWithRemark(
     val transactionTimeInMillis: Long,
     val transactionType: String,
     val transmissionDateTime: String,
-    val remark: String = ""
+    val remark: String = "",
 )
 
 fun mapToTransactionResponse(transWithRemark: TransactionWithRemark) =
@@ -123,7 +122,7 @@ fun mapTransactionResponseToTransactionWithRemark(transWithRemark: TransactionRe
         otherId = transWithRemark.otherId,
         id = transWithRemark.id.toInt(),
         responseDE55 = transWithRemark.responseDE55 ?: "",
-        responseMessage = transWithRemark.responseMessage
+        responseMessage = transWithRemark.responseMessage,
     )
 }
 
@@ -156,14 +155,14 @@ data class TransactionResponseX(
     val terminalId: String,
     val transactionTimeInMillis: Long,
     val transactionType: String,
-    val transmissionDateTime: String
+    val transmissionDateTime: String,
 ) {
     fun mapToStormStructure(
         key: String,
         routingChan: String,
         stormId: String,
         transStatus: String,
-        userType: String
+        userType: String,
     ): JsonObject {
         val jsonObject = JsonObject()
         jsonObject.addProperty("AID", AID ?: "")
@@ -206,5 +205,5 @@ data class TransactionResponseX(
 
 data class TransactionToLogBeforeConnectingToNibbs(
     val status: String,
-    val transactionResponse: TransactionWithRemark
+    val transactionResponse: TransactionWithRemark,
 )

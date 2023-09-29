@@ -22,7 +22,9 @@ import com.netpluspay.contactless.sdk.utils.ContactlessReaderResult
 import com.netpluspay.nibssclient.models.IsoAccountType
 import com.netpluspay.nibssclient.models.MakePaymentParams
 import com.netpluspay.nibssclient.models.UserData
+import com.netpluspay.nibssclient.network.StormApiClient
 import com.netpluspay.nibssclient.service.NetposPaymentClient
+import com.netpluspay.nibssclient.util.Mapper.testingTesting
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.schedulers.Schedulers
@@ -101,6 +103,8 @@ class ContactlessPaymentActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val aaaa = StormApiClient().testingField
+        testingTesting()
         setContentView(R.layout.activity_contactless_payment)
         initializeViews()
         configureTerminal()

@@ -50,7 +50,8 @@ data class TransactionResponse(
     @PrimaryKey(autoGenerate = true)
     var id: Long = 0,
     @Ignore
-    var responseDE55: String? = null
+    var responseDE55: String? = null,
+    var responseMessage: String = ""
 ) : Parcelable {
     fun validateResponse() = responseCode.isEmpty().not()
 
@@ -60,13 +61,15 @@ data class TransactionResponse(
     var source: String? = null
 
     constructor() : this(TransactionType.PURCHASE, "", 0L, "", "", "", "", "")
+    init {
+        if (responseMessage.isEmpty()) {
+            responseMessage = errorMessage ?: Constants.getResponseMessageFromCode(responseCode)
+        }
+    }
 }
 
 val TransactionResponse.isApproved: Boolean
     get() = responseCode == "00"
-
-val TransactionResponse.responseMessage: String
-    get() = errorMessage ?: Constants.getResponseMessageFromCode(responseCode)
 
 val TransactionResponse.issuerAuthData91: String?
     get() {

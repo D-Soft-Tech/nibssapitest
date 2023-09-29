@@ -5,8 +5,8 @@ import androidx.room.Entity
 import androidx.room.Ignore
 import androidx.room.PrimaryKey
 import com.danbamitale.epmslib.tlv.TLVList
-import com.danbamitale.epmslib.utils.Constants
 import com.danbamitale.epmslib.utils.IsoAccountType
+import kotlinx.android.parcel.IgnoredOnParcel
 import kotlinx.android.parcel.Parcelize
 
 @Entity
@@ -47,8 +47,11 @@ data class TransactionResponse(
     var id: Long = 0,
     @Ignore var responseDE55: String? = null,
     var source: PosMode = PosMode.EPMS,
-    var interSwitchThreshold: Long = 0L
+    var interSwitchThreshold: Long = 0L,
+    var responseMessage: String = "",
 ) : Parcelable {
+
+    @IgnoredOnParcel
     var errorMessage: String? = null
 
     constructor() : this(TransactionType.PURCHASE, "", 0L, "", "", "", "", "")
@@ -56,9 +59,6 @@ data class TransactionResponse(
 
 val TransactionResponse.isApproved: Boolean
     get() = responseCode == "00"
-
-val TransactionResponse.responseMessage: String
-    get() = errorMessage ?: Constants.getResponseMessageFromCode(responseCode)
 
 val TransactionResponse.issuerAuthData91: String?
     get() {
@@ -92,7 +92,7 @@ data class AccountBalance(
     val amountType: String,
     val currencyCode: String,
     val amountSign: Char,
-    val amount: Long
+    val amount: Long,
 )
 
 private fun parseAdditionalAmountString(inputString: String): AccountBalance {

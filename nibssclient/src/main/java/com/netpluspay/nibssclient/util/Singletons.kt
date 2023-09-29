@@ -3,7 +3,6 @@ package com.netpluspay.nibssclient.util
 import com.danbamitale.epmslib.entities.ConfigData
 import com.danbamitale.epmslib.entities.KeyHolder
 import com.danbamitale.epmslib.entities.TransactionResponse
-import com.danbamitale.epmslib.entities.responseMessage
 import com.dsofttech.dprefs.utils.DPrefs
 import com.google.gson.Gson
 import com.netpluspay.nibssclient.models.ConfigurationData

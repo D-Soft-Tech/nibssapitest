@@ -2,7 +2,6 @@ package com.netpluspay.nibssclient.util
 
 import android.annotation.SuppressLint
 import com.danbamitale.epmslib.entities.TransactionResponse
-import com.danbamitale.epmslib.entities.responseMessage
 import com.netpluspay.nibssclient.models.KeyHolder
 import com.netpluspay.nibssclient.models.TransactionResponseX
 import com.netpluspay.nibssclient.models.TransactionWithRemark
@@ -38,7 +37,7 @@ object RandomNumUtil {
             sessionKey,
             pinKey,
             track2Key,
-            bdk
+            bdk,
         )
     }
 
@@ -98,7 +97,7 @@ object RandomNumUtil {
                 terminalId = terminalId,
                 transactionTimeInMillis = transactionTimeInMillis,
                 transactionType = transactionType.name,
-                transmissionDateTime = getCurrentDateTime()
+                transmissionDateTime = getCurrentDateTime(),
             )
         }
     }
@@ -106,7 +105,7 @@ object RandomNumUtil {
     fun mapDanbamitaleResponseToResponseWithRrn(
         input: TransactionResponse,
         remark: String,
-        rrn: String?
+        rrn: String?,
     ): TransactionWithRemark {
         with(input) {
             return TransactionWithRemark(
@@ -139,7 +138,7 @@ object RandomNumUtil {
                 transactionTimeInMillis = transactionTimeInMillis,
                 transactionType = transactionType.name,
                 transmissionDateTime = getCurrentDateTime(),
-                remark = remark
+                remark = remark,
             )
         }
     }

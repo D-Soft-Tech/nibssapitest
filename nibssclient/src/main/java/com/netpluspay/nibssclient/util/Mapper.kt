@@ -14,10 +14,12 @@ object Mapper {
                         AccountBalanceResponse::accountType.name -> propertiesByName[amountType]?.name
                         else -> propertiesByName[parameter.name]?.get(this@toAccountBalanceResponse)
                     }
-                }
+                },
             )
         }
 
     fun AccountBalance.mapToAccountBalanceResponse(): AccountBalanceResponse =
         AccountBalanceResponse(accountType.name, amountType, currencyCode, amountSign, amount)
+
+    fun testingTesting(): String = "I am just testing"
 }
